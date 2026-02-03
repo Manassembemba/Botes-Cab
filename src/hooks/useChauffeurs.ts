@@ -14,7 +14,7 @@ export function useChauffeurs() {
         .from('tb_chauffeurs')
         .select('*')
         .order('nom', { ascending: true });
-      
+
       if (error) throw error;
       return data;
     },
@@ -30,7 +30,7 @@ export function useChauffeur(id: number) {
         .select('*')
         .eq('chauffeur_id', id)
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -40,7 +40,7 @@ export function useChauffeur(id: number) {
 
 export function useCreateChauffeur() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (chauffeur: ChauffeurInsert) => {
       const { data, error } = await supabase
@@ -48,7 +48,7 @@ export function useCreateChauffeur() {
         .insert(chauffeur)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -60,7 +60,7 @@ export function useCreateChauffeur() {
 
 export function useUpdateChauffeur() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...chauffeur }: ChauffeurUpdate & { id: number }) => {
       const { data, error } = await supabase
@@ -69,7 +69,7 @@ export function useUpdateChauffeur() {
         .eq('chauffeur_id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -81,18 +81,32 @@ export function useUpdateChauffeur() {
 
 export function useDeleteChauffeur() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: number) => {
       const { error } = await supabase
         .from('tb_chauffeurs')
         .delete()
         .eq('chauffeur_id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chauffeurs'] });
+    },
+  });
+}
+
+// Hook pour obtenir uniquement les chauffeurs disponibles (sans mission active)
+export function useAvailableChauffeurs() {
+  return useQuery({
+    queryKey: ['chauffeurs', 'available'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .rpc('get_available_chauffeurs');
+
+      if (error) throw error;
+      return data as Chauffeur[];
     },
   });
 }

@@ -20,6 +20,13 @@ const statutOptions = [
   { value: 'Hors service', label: 'Hors service' },
 ];
 
+const categorieOptions = [
+  { value: 'Économique', label: 'Économique' },
+  { value: 'VIP', label: 'VIP' },
+  { value: 'Bus', label: 'Bus' },
+  { value: '4x4', label: '4x4' },
+];
+
 export function VehiculeFormDialog({ open, onOpenChange, vehicule }: VehiculeFormDialogProps) {
   const { toast } = useToast();
   const createMutation = useCreateVehicule();
@@ -39,6 +46,7 @@ export function VehiculeFormDialog({ open, onOpenChange, vehicule }: VehiculeFor
     valeur_achat: 0,
     type_carburant: 'Diesel',
     capacite_reservoir: 0,
+    categorie: 'Économique',
   });
 
   useEffect(() => {
@@ -56,6 +64,7 @@ export function VehiculeFormDialog({ open, onOpenChange, vehicule }: VehiculeFor
         valeur_achat: vehicule.valeur_achat || 0,
         type_carburant: vehicule.type_carburant || 'Diesel',
         capacite_reservoir: vehicule.capacite_reservoir || 0,
+        categorie: vehicule.categorie || 'Économique',
       });
     } else {
       setFormData({
@@ -71,6 +80,7 @@ export function VehiculeFormDialog({ open, onOpenChange, vehicule }: VehiculeFor
         valeur_achat: 0,
         type_carburant: 'Diesel',
         capacite_reservoir: 0,
+        categorie: 'Économique',
       });
     }
   }, [vehicule, open]);
@@ -250,6 +260,26 @@ export function VehiculeFormDialog({ open, onOpenChange, vehicule }: VehiculeFor
                     onChange={(e) => setFormData(prev => ({ ...prev, capacite_reservoir: parseFloat(e.target.value) || 0 }))}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="categorie">Catégorie de véhicule</Label>
+                <Select
+                  value={formData.categorie || 'Économique'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, categorie: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir une catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categorieOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">Impacte le calcul automatique des tarifs de mission.</p>
               </div>
             </div>
           </div>

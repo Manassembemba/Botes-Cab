@@ -24,7 +24,7 @@ export function useMissions() {
           vehicule:tb_vehicules(*)
         `)
         .order('date_depart_prevue', { ascending: false });
-      
+
       if (error) throw error;
       return data as MissionWithDetails[];
     },
@@ -44,7 +44,7 @@ export function useMission(id: number) {
         `)
         .eq('mission_id', id)
         .single();
-      
+
       if (error) throw error;
       return data as MissionWithDetails;
     },
@@ -54,17 +54,38 @@ export function useMission(id: number) {
 
 export function useCreateMission() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (mission: MissionInsert) => {
-      const { data, error } = await supabase
+      // 1. Créer la mission
+      const { data: newMission, error: missionError } = await supabase
         .from('tb_missions')
         .insert(mission)
         .select()
         .single();
-      
-      if (error) throw error;
-      return data;
+
+      if (missionError) throw missionError;
+
+      // 2. Si un acompte est défini, créer le paiement correspondant
+      if (mission.acompte && mission.acompte > 0) {
+        const { error: paymentError } = await supabase
+          .from('tb_paiements')
+          .insert({
+            mission_id: newMission.mission_id,
+            montant: mission.acompte,
+            devise: mission.devise || 'USD',
+            methode_paiement: 'Cash', // Par défaut pour le moment
+            notes: 'Acompte initial à la création',
+            date_paiement: new Date().toISOString()
+          });
+
+        if (paymentError) {
+          console.error("Erreur lors de la création du paiement initial:", paymentError);
+          // On ne bloque pas la création de la mission, mais on log l'erreur
+        }
+      }
+
+      return newMission;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['missions'] });
@@ -74,7 +95,7 @@ export function useCreateMission() {
 
 export function useUpdateMission() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...mission }: MissionUpdate & { id: number }) => {
       const { data, error } = await supabase
@@ -83,7 +104,7 @@ export function useUpdateMission() {
         .eq('mission_id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -95,14 +116,14 @@ export function useUpdateMission() {
 
 export function useDeleteMission() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: number) => {
       const { error } = await supabase
         .from('tb_missions')
         .delete()
         .eq('mission_id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {

@@ -21,6 +21,7 @@ import {
 const disponibiliteConfig: Record<string, { label: string; className: string }> = {
   'Disponible': { label: 'Disponible', className: 'bg-status-available/20 text-status-available border-status-available/30' },
   'En mission': { label: 'En mission', className: 'bg-status-assigned/20 text-status-assigned border-status-assigned/30' },
+  'Indisponible': { label: 'En mission', className: 'bg-status-assigned/20 text-status-assigned border-status-assigned/30' },
   'Repos': { label: 'Repos', className: 'bg-muted text-muted-foreground border-border' },
   'Congé maladie': { label: 'Congé maladie', className: 'bg-status-maintenance/20 text-status-maintenance border-status-maintenance/30' },
 };
@@ -28,7 +29,7 @@ const disponibiliteConfig: Record<string, { label: string; className: string }> 
 const statusFilters = [
   { label: 'Tous', value: 'all' },
   { label: 'Disponible', value: 'Disponible' },
-  { label: 'En mission', value: 'En mission' },
+  { label: 'En mission', value: 'Indisponible' },
   { label: 'Repos', value: 'Repos' },
   { label: 'Congé maladie', value: 'Congé maladie' },
 ];
@@ -37,7 +38,7 @@ export default function Drivers() {
   const { data: chauffeurs, isLoading, error } = useChauffeurs();
   const deleteMutation = useDeleteChauffeur();
   const { toast } = useToast();
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -66,10 +67,10 @@ export default function Drivers() {
       await deleteMutation.mutateAsync(chauffeurToDelete.chauffeur_id);
       toast({ title: 'Chauffeur supprimé avec succès' });
     } catch (error) {
-      toast({ 
-        title: 'Erreur', 
+      toast({
+        title: 'Erreur',
         description: 'Impossible de supprimer ce chauffeur (peut être lié à des missions)',
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     }
     setDeleteDialogOpen(false);
@@ -127,7 +128,7 @@ export default function Drivers() {
             className="pl-10"
           />
         </div>
-        
+
         <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
           {statusFilters.map((filter) => (
             <button
@@ -174,7 +175,7 @@ export default function Drivers() {
             const status = disponibiliteConfig[chauffeur.disponibilite] || disponibiliteConfig['Disponible'];
             const initials = `${chauffeur.prenom[0]}${chauffeur.nom[0]}`;
             const expiringSoon = licenseExpiringSoon(chauffeur.permis_exp_date);
-            
+
             return (
               <div
                 key={chauffeur.chauffeur_id}
@@ -223,9 +224,9 @@ export default function Drivers() {
                     <Pencil className="h-4 w-4 mr-1" />
                     Modifier
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="text-destructive hover:text-destructive"
                     onClick={() => {
                       setChauffeurToDelete(chauffeur);
@@ -290,9 +291,9 @@ export default function Drivers() {
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(chauffeur)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="text-destructive hover:text-destructive"
                           onClick={() => {
                             setChauffeurToDelete(chauffeur);
@@ -317,8 +318,8 @@ export default function Drivers() {
         </div>
       )}
 
-      <ChauffeurFormDialog 
-        open={formOpen} 
+      <ChauffeurFormDialog
+        open={formOpen}
         onOpenChange={handleFormClose}
         chauffeur={editingChauffeur}
       />
@@ -328,7 +329,7 @@ export default function Drivers() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer {chauffeurToDelete?.prenom} {chauffeurToDelete?.nom} ? 
+              Êtes-vous sûr de vouloir supprimer {chauffeurToDelete?.prenom} {chauffeurToDelete?.nom} ?
               Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>

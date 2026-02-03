@@ -204,9 +204,16 @@ export default function Vehicles() {
                   {vehicule.annee_achat && (
                     <p className="text-sm text-muted-foreground">Année: {vehicule.annee_achat}</p>
                   )}
-                  <Badge variant="outline" className={cn('text-xs', status.className)}>
-                    {status.label}
-                  </Badge>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className={cn('text-[10px] uppercase font-bold tracking-wider', status.className)}>
+                      {status.label}
+                    </Badge>
+                    {vehicule.categorie && (
+                      <Badge variant="secondary" className="text-[10px] bg-muted text-muted-foreground border-none">
+                        {vehicule.categorie}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
 
                 {needsRevision && vehicule.date_prochaine_revision && (
@@ -262,9 +269,16 @@ export default function Vehicles() {
                     <td className="px-4 py-3 text-foreground">{vehicule.immatriculation}</td>
                     <td className="px-4 py-3 text-foreground">{vehicule.kilometrage_actuel.toLocaleString()} km</td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className={cn('text-xs', status.className)}>
-                        {status.label}
-                      </Badge>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className={cn('text-[10px] uppercase font-bold tracking-wider', status.className)}>
+                          {status.label}
+                        </Badge>
+                        {vehicule.categorie && (
+                          <Badge variant="secondary" className="text-[10px] bg-muted text-muted-foreground border-none">
+                            {vehicule.categorie}
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">

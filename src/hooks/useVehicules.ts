@@ -14,7 +14,7 @@ export function useVehicules() {
         .from('tb_vehicules')
         .select('*')
         .order('marque', { ascending: true });
-      
+
       if (error) throw error;
       return data;
     },
@@ -30,7 +30,7 @@ export function useVehicule(id: number) {
         .select('*')
         .eq('vehicule_id', id)
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -40,7 +40,7 @@ export function useVehicule(id: number) {
 
 export function useCreateVehicule() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (vehicule: VehiculeInsert) => {
       const { data, error } = await supabase
@@ -48,7 +48,7 @@ export function useCreateVehicule() {
         .insert(vehicule)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -60,7 +60,7 @@ export function useCreateVehicule() {
 
 export function useUpdateVehicule() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...vehicule }: VehiculeUpdate & { id: number }) => {
       const { data, error } = await supabase
@@ -69,7 +69,7 @@ export function useUpdateVehicule() {
         .eq('vehicule_id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -81,18 +81,32 @@ export function useUpdateVehicule() {
 
 export function useDeleteVehicule() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: number) => {
       const { error } = await supabase
         .from('tb_vehicules')
         .delete()
         .eq('vehicule_id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicules'] });
+    },
+  });
+}
+
+// Hook pour obtenir uniquement les véhicules disponibles (sans mission active)
+export function useAvailableVehicules() {
+  return useQuery({
+    queryKey: ['vehicules', 'available'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .rpc('get_available_vehicules');
+
+      if (error) throw error;
+      return data as Vehicule[];
     },
   });
 }

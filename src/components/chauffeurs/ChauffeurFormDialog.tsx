@@ -16,6 +16,7 @@ interface ChauffeurFormDialogProps {
 const disponibiliteOptions = [
   { value: 'Disponible', label: 'Disponible' },
   { value: 'En mission', label: 'En mission' },
+  { value: 'Indisponible', label: 'En mission' },
   { value: 'Repos', label: 'Repos' },
   { value: 'Congé maladie', label: 'Congé maladie' },
 ];
