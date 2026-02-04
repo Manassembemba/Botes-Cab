@@ -75,3 +75,37 @@ export function useDeleteDepense() {
         },
     });
 }
+
+export function useValidateMultiExpense() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            dateBon,
+            description,
+            items
+        }: {
+            dateBon: Date;
+            description: string;
+            items: Array<{
+                qte: number;
+                description: string;
+                pu_usd: number;
+                pu_cdf: number;
+            }>;
+        }) => {
+            const { data, error } = await supabase.rpc('validate_multi_expense', {
+                p_date_bon: dateBon.toISOString(),
+                p_description_globale: description,
+                p_items: items
+            });
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['depenses'] });
+            queryClient.invalidateQueries({ queryKey: ['caisse'] });
+        },
+    });
+}

@@ -131,3 +131,38 @@ export function useDeleteMission() {
     },
   });
 }
+
+export function useCompleteMission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      missionId,
+      montant,
+      devise,
+      raison,
+      isChargeEntreprise
+    }: {
+      missionId: number;
+      montant: number;
+      devise: string;
+      raison?: string;
+      isChargeEntreprise: boolean;
+    }) => {
+      const { error } = await supabase.rpc('complete_mission_with_fuel', {
+        p_mission_id: missionId,
+        p_montant: montant,
+        p_devise: devise,
+        p_raison: raison,
+        p_is_charge_entreprise: isChargeEntreprise
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['missions'] });
+      queryClient.invalidateQueries({ queryKey: ['caisse'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicules'] });
+    },
+  });
+}

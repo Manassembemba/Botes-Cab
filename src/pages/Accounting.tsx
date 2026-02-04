@@ -11,8 +11,12 @@ import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, end
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
+import { MultiExpenseDialog } from '@/components/accounting/MultiExpenseDialog';
+import { MultiIncomeDialog } from '@/components/accounting/MultiIncomeDialog';
+import { exportToCSV, exportToPDF } from '@/services/exportService';
+import { FileText, Download } from 'lucide-react';
 
-type DateFilterType = 'today' | 'week' | 'month' | 'custom';
+type DateFilterType = 'today' | 'yesterday' | 'week' | 'month' | 'custom';
 
 export default function Accounting() {
     const { data: transactions, isLoading } = useCaisse();
@@ -22,6 +26,8 @@ export default function Accounting() {
     // États pour le filtrage
     const [filterType, setFilterType] = useState<DateFilterType>('today');
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
+    const [isMultiExpenseOpen, setIsMultiExpenseOpen] = useState(false);
+    const [isMultiIncomeOpen, setIsMultiIncomeOpen] = useState(false);
 
     // Calcul des transactions filtrées
     const filteredTransactions = useMemo(() => {
@@ -35,6 +41,11 @@ export default function Accounting() {
             case 'today':
                 start = startOfDay(now);
                 end = endOfDay(now);
+                break;
+            case 'yesterday':
+                const yesterday = subDays(now, 1);
+                start = startOfDay(yesterday);
+                end = endOfDay(yesterday);
                 break;
             case 'week':
                 start = startOfWeek(now, { locale: fr });
@@ -101,12 +112,83 @@ export default function Accounting() {
                     <h1 className="text-2xl font-bold text-foreground">Comptabilité & Caisse</h1>
                     <p className="text-muted-foreground mt-1">Suivi des flux financiers et solde de caisse</p>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" className="gap-2">
+                <div className="flex flex-wrap gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 border-primary/20 hover:bg-primary/5"
+                        onClick={() => {
+                            const now = new Date();
+                            let start: Date;
+                            let end: Date;
+
+                            switch (filterType) {
+                                case 'today':
+                                    start = startOfDay(now);
+                                    end = endOfDay(now);
+                                    break;
+                                case 'yesterday':
+                                    const yest = subDays(now, 1);
+                                    start = startOfDay(yest);
+                                    end = endOfDay(yest);
+                                    break;
+                                case 'week':
+                                    start = startOfWeek(now, { locale: fr });
+                                    end = endOfWeek(now, { locale: fr });
+                                    break;
+                                case 'month':
+                                    start = startOfMonth(now);
+                                    end = endOfMonth(now);
+                                    break;
+                                case 'custom':
+                                    start = startOfDay(dateRange?.from || now);
+                                    end = endOfDay(dateRange?.to || dateRange?.from || now);
+                                    break;
+                                default:
+                                    start = startOfDay(now);
+                                    end = endOfDay(now);
+                            }
+
+                            const startStr = format(start, 'dd/MM/yyyy');
+                            const endStr = format(end, 'dd/MM/yyyy');
+                            const dateString = startStr === endStr ? startStr : `${startStr} - ${endStr}`;
+
+                            exportToPDF(
+                                filteredTransactions,
+                                dateString,
+                                {
+                                    ...fluxPeriode,
+                                    soldeUSD: soldePeriodeUSD,
+                                    soldeCDF: soldePeriodeCDF
+                                }
+                            );
+                        }}
+                    >
+                        <FileText className="h-4 w-4 text-primary" />
+                        Exporter PDF
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 border-status-available/20 hover:bg-status-available/5"
+                        onClick={() => exportToCSV(filteredTransactions, `export_caisse_${format(new Date(), 'yyyyMMdd')}`)}
+                    >
+                        <Download className="h-4 w-4 text-status-available" />
+                        Exporter CSV
+                    </Button>
+                    <div className="w-px h-8 bg-border mx-1 hidden sm:block" />
+                    <Button
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => setIsMultiExpenseOpen(true)}
+                    >
                         <Receipt className="h-4 w-4" />
                         Nouvelle Dépense
                     </Button>
-                    <Button className="gap-2">
+                    <Button
+                        className="gap-2"
+                        onClick={() => setIsMultiIncomeOpen(true)}
+                    >
                         <Plus className="h-4 w-4" />
                         Nouvelle Entrée
                     </Button>
@@ -127,6 +209,14 @@ export default function Accounting() {
                         className="text-sm"
                     >
                         Aujourd'hui
+                    </Button>
+                    <Button
+                        variant={filterType === 'yesterday' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => setFilterType('yesterday')}
+                        className="text-sm"
+                    >
+                        Hier
                     </Button>
                     <Button
                         variant={filterType === 'week' ? 'secondary' : 'ghost'}
@@ -192,52 +282,60 @@ export default function Accounting() {
 
             {/* Soldes Section */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Card className="bg-primary/5 border-primary/20">
+                {/* Entrées Card */}
+                <Card className="border-status-available/20 bg-status-available/5 transition-all hover:shadow-md">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Solde (Période)</CardTitle>
-                        <Wallet className="h-4 w-4 text-primary" />
+                        <CardTitle className="text-sm font-bold uppercase tracking-wider text-status-available">Total Entrées</CardTitle>
+                        <div className="h-8 w-8 rounded-full bg-status-available/10 flex items-center justify-center">
+                            <ArrowUpRight className="h-4 w-4 text-status-available" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-primary">
+                        <div className="text-2xl font-bold text-status-available">
+                            +${fluxPeriode.entreesUSD.toLocaleString()}
+                        </div>
+                        <div className="text-sm font-medium text-status-available/70">
+                            +{fluxPeriode.entreesCDF.toLocaleString()} FC
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-2 italic">Toutes les recettes sur la période</p>
+                    </CardContent>
+                </Card>
+
+                {/* Sorties Card */}
+                <Card className="border-destructive/20 bg-destructive/5 transition-all hover:shadow-md">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-bold uppercase tracking-wider text-destructive">Total Sorties</CardTitle>
+                        <div className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center">
+                            <ArrowDownLeft className="h-4 w-4 text-destructive" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-destructive">
+                            -${fluxPeriode.sortiesUSD.toLocaleString()}
+                        </div>
+                        <div className="text-sm font-medium text-destructive/70">
+                            -{fluxPeriode.sortiesCDF.toLocaleString()} FC
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-2 italic">Toutes les dépenses sur la période</p>
+                    </CardContent>
+                </Card>
+
+                {/* Résultat Net Card */}
+                <Card className="border-primary/20 bg-primary/5 transition-all hover:shadow-md">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-bold uppercase tracking-wider text-primary">Résultat Net</CardTitle>
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Wallet className="h-4 w-4 text-primary" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className={cn("text-2xl font-bold", soldePeriodeUSD >= 0 ? "text-primary" : "text-destructive")}>
                             {soldePeriodeUSD >= 0 ? '+' : ''}{soldePeriodeUSD.toLocaleString()} USD
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Résultat net sur la période</p>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-status-available/5 border-status-available/20">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Solde CDF (Période)</CardTitle>
-                        <Wallet className="h-4 w-4 text-status-available" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-status-available">
+                        <div className={cn("text-sm font-medium", soldePeriodeCDF >= 0 ? "text-primary/70" : "text-destructive/70")}>
                             {soldePeriodeCDF >= 0 ? '+' : ''}{soldePeriodeCDF.toLocaleString()} FC
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Résultat net sur la période</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Flux (Période sélectionnée)</CardTitle>
-                        <History className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex gap-4">
-                            <div>
-                                <p className="text-xs text-muted-foreground">Entrées (USD)</p>
-                                <div className="text-lg font-semibold text-status-available">
-                                    +${fluxPeriode.entreesUSD.toLocaleString()}
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground">Sorties (USD)</p>
-                                <div className="text-lg font-semibold text-destructive">
-                                    -${fluxPeriode.sortiesUSD.toLocaleString()}
-                                </div>
-                            </div>
-                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-2 italic">Bénéfice ou déficit sur la période</p>
                     </CardContent>
                 </Card>
             </div>
@@ -311,6 +409,14 @@ export default function Accounting() {
                     </table>
                 </div>
             </div>
+            <MultiExpenseDialog
+                open={isMultiExpenseOpen}
+                onOpenChange={setIsMultiExpenseOpen}
+            />
+            <MultiIncomeDialog
+                open={isMultiIncomeOpen}
+                onOpenChange={setIsMultiIncomeOpen}
+            />
         </div>
     );
 }

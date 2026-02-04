@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -110,4 +110,37 @@ export function useSoldeCaisse() {
     }, 0) || 0;
 
     return { soldeUSD, soldeCDF };
+}
+
+export function useValidateMultiIncome() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            dateEntree,
+            description,
+            items
+        }: {
+            dateEntree: Date;
+            description: string;
+            items: Array<{
+                qte: number;
+                description: string;
+                pu_usd: number;
+                pu_cdf: number;
+            }>;
+        }) => {
+            const { data, error } = await supabase.rpc('validate_multi_income', {
+                p_date_entree: dateEntree.toISOString(),
+                p_description_globale: description,
+                p_items: items
+            });
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['caisse'] });
+        },
+    });
 }

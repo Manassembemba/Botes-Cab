@@ -1,6 +1,7 @@
 import { useMissions, useDeleteMission, useUpdateMission, type MissionWithDetails, type Mission } from '@/hooks/useMissions';
 import { MissionFormDialog } from '@/components/missions/MissionFormDialog';
 import { MissionPaymentDialog } from '@/components/missions/MissionPaymentDialog';
+import { MissionCompletionDialog } from '@/components/missions/MissionCompletionDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +57,10 @@ export default function Missions() {
   // States pour le paiement
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [missionToPay, setMissionToPay] = useState<MissionWithDetails | null>(null);
+
+  // States pour la clôture
+  const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
+  const [missionToComplete, setMissionToComplete] = useState<MissionWithDetails | null>(null);
 
   const filteredMissions = missions?.filter((mission) => {
     // 1. Filtre Recherche (Priorité absolue)
@@ -399,7 +404,10 @@ export default function Missions() {
                         size="sm"
                         variant="default"
                         className="bg-blue-600 hover:bg-blue-700 text-white gap-1"
-                        onClick={() => handleStatusChange(mission, 'Terminée')}
+                        onClick={() => {
+                          setMissionToComplete(mission);
+                          setCompletionDialogOpen(true);
+                        }}
                       >
                         <CheckCircle className="h-4 w-4" />
                         Terminer
@@ -484,6 +492,12 @@ export default function Missions() {
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
         mission={missionToPay}
+      />
+
+      <MissionCompletionDialog
+        open={completionDialogOpen}
+        onOpenChange={setCompletionDialogOpen}
+        mission={missionToComplete}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

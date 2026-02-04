@@ -63,13 +63,13 @@ export function RemboursementFormDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // If status changes to Approuvé or Refusé, set date_traitement
     const dataToSubmit = { ...formData };
     if ((formData.statut === 'Approuvé' || formData.statut === 'Refusé' || formData.statut === 'Remboursé') && !formData.date_traitement) {
       dataToSubmit.date_traitement = new Date().toISOString();
     }
-    
+
     onSubmit(dataToSubmit);
   };
 
