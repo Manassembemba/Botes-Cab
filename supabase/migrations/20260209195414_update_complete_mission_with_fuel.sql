@@ -1,15 +1,3 @@
--- Migration: 20260204113000_fuel_management.sql
--- Description: Ajout du support pour la gestion du carburant par mission.
-
--- 1. Ajouter mission_id à tb_depenses
-ALTER TABLE public.tb_depenses 
-ADD COLUMN IF NOT EXISTS mission_id bigint REFERENCES public.tb_missions(mission_id) ON DELETE SET NULL;
-
--- Index pour la performance
-CREATE INDEX IF NOT EXISTS idx_depenses_mission ON public.tb_depenses(mission_id);
-
--- 2. Fonction pour clôturer une mission avec carburant et kilométrage
--- 2. Fonction pour clôturer une mission avec une dépense simplifiée
 CREATE OR REPLACE FUNCTION public.complete_mission_with_fuel(
     p_mission_id bigint,
     p_km_final numeric,

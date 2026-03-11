@@ -1,0 +1,11 @@
+Je comprends que les messages d'erreur ne s'affichent pas dans la console du navigateur. C'est essentiel pour le débogage.
+
+Pour m'aider à comprendre pourquoi cela se produit, pourriez-vous s'il vous plaît me fournir les informations suivantes :
+
+1.  **Environnement de développement** : Êtes-vous en train d'exécuter l'application en mode développement (par exemple, avec `npm run dev`, `yarn dev` ou `vite`) ou s'agit-il d'une version de production déployée ?
+2.  **Filtres de la console du navigateur** : Pourriez-vous vérifier les paramètres de filtre de votre console de navigateur ? Assurez-vous que l'option "Errors" (Erreurs) est bien sélectionnée. Dans la plupart des navigateurs (Chrome, Firefox, Edge) :
+    *   Ouvrez la console (généralement `F12` ou `Ctrl+Shift+I`).
+    *   Cherchez des boutons ou des menus déroulants pour filtrer les messages (souvent "Default levels", "All", "Errors", "Warnings", "Info", etc.).
+    *   Assurez-vous que les erreurs ne sont pas masquées.
+
+Dès que j'aurai ces informations, je pourrai mieux cibler la cause du problème.

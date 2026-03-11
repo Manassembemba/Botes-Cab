@@ -2,6 +2,7 @@ import { useMissions, useDeleteMission, useUpdateMission, type MissionWithDetail
 import { MissionFormDialog } from '@/components/missions/MissionFormDialog';
 import { MissionPaymentDialog } from '@/components/missions/MissionPaymentDialog';
 import { MissionCompletionDialog } from '@/components/missions/MissionCompletionDialog';
+import { ClientFormDialog } from '@/components/clients/ClientFormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +62,9 @@ export default function Missions() {
   // States pour la clôture
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [missionToComplete, setMissionToComplete] = useState<MissionWithDetails | null>(null);
+
+  // States pour le dialogue client
+  const [clientFormOpen, setClientFormOpen] = useState(false);
 
   const filteredMissions = missions?.filter((mission) => {
     // 1. Filtre Recherche (Priorité absolue)
@@ -486,6 +490,17 @@ export default function Missions() {
         open={formOpen}
         onOpenChange={handleFormClose}
         mission={editingMission}
+        onOpenClientForm={() => setClientFormOpen(true)}
+      />
+      <ClientFormDialog
+        open={clientFormOpen}
+        onOpenChange={setClientFormOpen}
+        client={null}
+        onClientCreated={(newClient) => {
+          // Mettre à jour le formulaire de mission avec le nouveau client
+          // Cette logique sera gérée dans le composant MissionFormDialog
+          setClientFormOpen(false);
+        }}
       />
 
       <MissionPaymentDialog

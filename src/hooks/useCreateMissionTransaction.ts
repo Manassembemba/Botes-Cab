@@ -13,6 +13,8 @@ export function useCreateMissionTransaction() {
 
     return useMutation({
         mutationFn: async ({ missionData, paymentAmount, paymentMethodId }: CreateMissionTransactionParams) => {
+            console.log("🚀 [Mission Transaction] Starting creation with:", { missionData, paymentAmount, paymentMethodId });
+
             // Préparation des données pour le RPC
             // On s'assure que les dates sont au format ISO string
             const formattedMissionData = {
@@ -21,13 +23,24 @@ export function useCreateMissionTransaction() {
                 date_arrivee_prevue: new Date(missionData.date_arrivee_prevue).toISOString(),
             };
 
+            console.log("📦 [Mission Transaction] Formatted Payload:", {
+                mission_data: formattedMissionData,
+                payment_amount: paymentAmount,
+                payment_method_id: paymentMethodId
+            });
+
             const { data, error } = await supabase.rpc('create_mission_with_transaction', {
                 mission_data: formattedMissionData as any, // Cast as any car Json type complexe
                 payment_amount: paymentAmount,
                 payment_method_id: paymentMethodId
             });
 
-            if (error) throw error;
+            if (error) {
+                console.error("❌ [Mission Transaction] Supabase RPC Error:", error);
+                throw error;
+            }
+
+            console.log("✅ [Mission Transaction] Success:", data);
             return data;
         },
         onSuccess: () => {

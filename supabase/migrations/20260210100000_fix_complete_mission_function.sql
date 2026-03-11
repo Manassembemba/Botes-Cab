@@ -1,15 +1,15 @@
--- Migration: 20260204113000_fuel_management.sql
--- Description: Ajout du support pour la gestion du carburant par mission.
+-- Migration: 20260210100000_fix_complete_mission_function.sql
+-- Description: Fix pour résoudre le problème d'ambiguïté dans la fonction complete_mission_with_fuel
 
--- 1. Ajouter mission_id à tb_depenses
-ALTER TABLE public.tb_depenses 
-ADD COLUMN IF NOT EXISTS mission_id bigint REFERENCES public.tb_missions(mission_id) ON DELETE SET NULL;
+-- Supprimer toutes les versions potentiellement problématiques de la fonction
+-- Nous allons d'abord supprimer la fonction avec l'ancien ordre de paramètres
+DROP FUNCTION IF EXISTS public.complete_mission_with_fuel(bigint, integer, numeric, text, numeric, varchar(10));
 
--- Index pour la performance
-CREATE INDEX IF NOT EXISTS idx_depenses_mission ON public.tb_depenses(mission_id);
+-- Supprimer d'autres variations possibles
+DROP FUNCTION IF EXISTS public.complete_mission_with_fuel(bigint, integer, numeric, numeric, varchar, text);
+DROP FUNCTION IF EXISTS public.complete_mission_with_fuel(bigint, numeric, integer, numeric, varchar, text);
 
--- 2. Fonction pour clôturer une mission avec carburant et kilométrage
--- 2. Fonction pour clôturer une mission avec une dépense simplifiée
+-- Recréer la fonction avec la bonne signature (selon la dernière migration)
 CREATE OR REPLACE FUNCTION public.complete_mission_with_fuel(
     p_mission_id bigint,
     p_km_final numeric,
@@ -95,3 +95,20 @@ BEGIN
 
 END;
 $$;
+
+-- Vérifier que la fonction a été correctement créée
+DO $$
+DECLARE
+    func_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO func_count
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public' AND p.proname = 'complete_mission_with_fuel';
+    
+    IF func_count != 1 THEN
+        RAISE WARNING 'ATTENTION: Il y a % versions de la fonction complete_mission_with_fuel. Il devrait n''y en avoir qu''une.', func_count;
+    ELSE
+        RAISE NOTICE 'Fonction complete_mission_with_fuel correctement configurée avec une seule version.';
+    END IF;
+END $$;

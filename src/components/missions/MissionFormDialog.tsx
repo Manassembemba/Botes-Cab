@@ -1,9 +1,35 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreateMissionTransaction } from '@/hooks/useCreateMissionTransaction';
 import { useUpdateMission, type Mission, type MissionInsert } from '@/hooks/useMissions';
 import { useChauffeurs } from '@/hooks/useChauffeurs';
@@ -12,15 +38,11 @@ import { useAvailableChauffeursInRange } from '@/hooks/useAvailableChauffeurs';
 import { useAvailableVehiculesInRange } from '@/hooks/useAvailableVehicules';
 import { useTarifs } from '@/hooks/useTarifs';
 import { useToast } from '@/hooks/use-toast';
-import { Info, AlertCircle, CreditCard, Banknote, Landmark } from 'lucide-react';
+import { Info, AlertCircle, CreditCard, Banknote, Landmark, Calendar, Clock, Plus } from 'lucide-react';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
-import { Badge } from '@/components/ui/badge';
-
-interface MissionFormDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  mission?: Mission | null;
-}
+import { useClients } from '@/hooks/useClients';
+import { useVehiculeAvailability, useChauffeurAvailability } from '@/hooks/useAvailability';
+import { cn } from '@/lib/utils';
 
 const statutOptions = [
   { value: 'Planifiée', label: 'Planifiée' },
@@ -36,12 +58,37 @@ const courseTypeOptions = [
   { value: 'Voyage Interurbain', label: 'Voyage Interurbain' },
 ];
 
-export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDialogProps) {
+const formSchema = z.object({
+  chauffeur_id: z.number().min(1, 'Veuillez sélectionner un chauffeur'),
+  vehicule_id: z.number().min(1, 'Veuillez sélectionner un véhicule'),
+  client_nom: z.string().min(1, 'Le nom du client est requis'),
+  lieu_depart: z.string().min(1, 'Le lieu de départ est requis'),
+  lieu_arrivee: z.string().min(1, 'Le lieu d\'arrivée est requis'),
+  date_depart_prevue: z.string().min(1, 'La date de départ est requise'),
+  date_arrivee_prevue: z.string().min(1, 'La date d\'arrivée est requise'),
+  statut_mission: z.string().min(1, 'Le statut est requis'),
+  montant_total: z.number().min(0, 'Le montant total doit être positif'),
+  acompte: z.number().min(0, 'L\'acompte doit être positif'),
+  solde: z.number().min(0, 'Le solde doit être positif'),
+  devise: z.string().min(1, 'La devise est requise'),
+  kilometrage_fin: z.number().nullable(),
+  type_course: z.string().min(1, 'Le type de course est requis'),
+});
+
+interface MissionFormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mission?: Mission | null;
+  onOpenClientForm?: () => void; // Fonction pour ouvrir le formulaire client
+}
+
+export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientForm }: MissionFormDialogProps) {
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<MissionInsert>({
     chauffeur_id: 0,
     vehicule_id: 0,
+    client_id: null, // Nouveau champ pour l'ID du client
     client_nom: '',
     lieu_depart: '',
     lieu_arrivee: '',
@@ -57,12 +104,19 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
   });
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+  const [clientFormOpen, setClientFormOpen] = useState(false);
 
   const { data: chauffeurs } = useChauffeurs();
   const { data: vehicules } = useVehicules();
+  const { data: tarifs } = useTarifs();
   const { data: paymentMethods } = usePaymentMethods();
+  const { data: clients } = useClients();
 
-  // Utiliser les hooks de disponibilité par plage si les dates sont définies
+  // Hooks pour la création et la mise à jour des missions
+  const createMutation = useCreateMissionTransaction();
+  const updateMutation = useUpdateMission();
+
+  // Utiliser les hooks de disponibilité par plage
   const { data: availableChauffeurs } = useAvailableChauffeursInRange(
     formData.date_depart_prevue,
     formData.date_arrivee_prevue
@@ -73,31 +127,66 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
     formData.date_arrivee_prevue
   );
 
-  const { data: tarifs } = useTarifs();
-  const createTransactionMutation = useCreateMissionTransaction();
-  const updateMutation = useUpdateMission();
-  const isEditing = !!mission;
+  // États pour les conflits
+  const [chauffeurConflits, setChauffeurConflits] = useState<any[]>([]);
+  const [vehiculeConflits, setVehiculeConflits] = useState<any[]>([]);
+  const [showConflits, setShowConflits] = useState(false);
 
   // En mode édition, on affiche toutes les ressources.
-  const chauffeursList = isEditing
+  const chauffeursList = mission
     ? chauffeurs
     : (formData.date_depart_prevue && formData.date_arrivee_prevue && availableChauffeurs)
       ? availableChauffeurs
       : chauffeurs;
 
-  const vehiculesList = isEditing
+  const vehiculesList = mission
     ? vehicules
     : (formData.date_depart_prevue && formData.date_arrivee_prevue && availableVehicules)
       ? availableVehicules
       : vehicules;
 
+  // Charger les disponibilités
+  const { data: vehiculeAvailability } = useVehiculeAvailability(
+    formData.vehicule_id || null,
+    {
+      startDate: formData.date_depart_prevue,
+      endDate: formData.date_arrivee_prevue,
+      excludeMissionId: mission?.mission_id
+    }
+  );
 
+  const { data: chauffeurAvailability } = useChauffeurAvailability(
+    formData.chauffeur_id || null,
+    {
+      startDate: formData.date_depart_prevue,
+      endDate: formData.date_arrivee_prevue,
+      excludeMissionId: mission?.mission_id
+    }
+  );
+
+  // Mettre à jour les conflits
+  useEffect(() => {
+    if (vehiculeAvailability) {
+      setVehiculeConflits(vehiculeAvailability.conflicts);
+    } else {
+      setVehiculeConflits([]); // Réinitialiser les conflits si pas de données
+    }
+  }, [vehiculeAvailability]);
+
+  useEffect(() => {
+    if (chauffeurAvailability) {
+      setChauffeurConflits(chauffeurAvailability.conflicts);
+    } else {
+      setChauffeurConflits([]); // Réinitialiser les conflits si pas de données
+    }
+  }, [chauffeurAvailability]);
 
   useEffect(() => {
     if (mission) {
       setFormData({
         chauffeur_id: mission.chauffeur_id,
         vehicule_id: mission.vehicule_id,
+        client_id: mission.client_id || null, // Ajout du client_id
         client_nom: mission.client_nom || '',
         lieu_depart: mission.lieu_depart,
         lieu_arrivee: mission.lieu_arrivee,
@@ -116,6 +205,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       setFormData({
         chauffeur_id: 0,
         vehicule_id: 0,
+        client_id: null,
         client_nom: '',
         lieu_depart: '',
         lieu_arrivee: '',
@@ -142,7 +232,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
 
   // Calcul automatique du tarif basé sur la catégorie du véhicule et le type de course
   useEffect(() => {
-    if (isEditing) return; // Ne pas écraser le prix en édition
+    if (mission) return; // Ne pas écraser le prix en édition
     if (!formData.vehicule_id || !formData.type_course || !tarifs || !vehicules) return;
 
     const selectedVehicule = vehicules.find(v => v.vehicule_id === formData.vehicule_id);
@@ -162,7 +252,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
         // On le garde pour l'instant, le solde s'ajustera
       }));
     }
-  }, [formData.vehicule_id, formData.type_course, tarifs, vehicules, isEditing]);
+  }, [formData.vehicule_id, formData.type_course, tarifs, vehicules, mission]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +267,9 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
     }
 
     // Validation paiement si acompte > 0 en création
-    if (!isEditing && formData.acompte && formData.acompte > 0 && !selectedPaymentMethod) {
+    console.log("📝 [Mission Form] Submitting with data:", formData);
+
+    if (!mission && formData.acompte && formData.acompte > 0 && !selectedPaymentMethod) {
       toast({
         title: 'Paiement requis',
         description: 'Veuillez sélectionner une méthode de paiement pour l\'acompte.',
@@ -186,13 +278,29 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       return;
     }
 
+    // Afficher un avertissement si des conflits existent
+    if (chauffeurConflits.length > 0 || vehiculeConflits.length > 0) {
+      const continueAnyway = await new Promise<boolean>((resolve) => {
+        if (window.confirm('Des conflits de disponibilité ont été détectés. Voulez-vous continuer ?')) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+
+      if (!continueAnyway) {
+        return;
+      }
+    }
+
     try {
-      if (isEditing && mission) {
+      if (mission) {
+        // Mise à jour
         await updateMutation.mutateAsync({ id: mission.mission_id, ...formData });
         toast({ title: 'Mission modifiée avec succès' });
       } else {
-        // En création, on utilise la transaction
-        await createTransactionMutation.mutateAsync({
+        // Création
+        await createMutation.mutateAsync({
           missionData: formData,
           paymentAmount: formData.acompte || 0,
           paymentMethodId: selectedPaymentMethod ? parseInt(selectedPaymentMethod) : null
@@ -207,6 +315,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       onOpenChange(false);
     } catch (error) {
       console.error('Erreur submission:', error);
+      console.log('🔍 [Mission Form] Full Error Object:', JSON.stringify(error, null, 2));
       toast({
         title: 'Erreur',
         description: error instanceof Error ? error.message : 'Une erreur est survenue',
@@ -222,11 +331,17 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
     return <CreditCard className="h-4 w-4" />; // M-Pesa etc
   };
 
+  // Vérifier si le formulaire est valide pour l'envoi
+  const isFormValid = formData.chauffeur_id > 0 && formData.vehicule_id > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Modifier la mission' : 'Nouvelle Réservation'}</DialogTitle>
+          <DialogTitle>{mission ? 'Modifier la mission' : 'Nouvelle Réservation'}</DialogTitle>
+          <DialogDescription>
+            {mission ? 'Modifiez les paramètres de la mission en cours.' : 'Complétez les informations pour planifier une nouvelle mission de transport.'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -238,7 +353,53 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
             </h3>
 
             <div className="space-y-2">
-              <Label htmlFor="client_nom">Client</Label>
+              <Label htmlFor="client_id">Client</Label>
+              <Select
+                value={formData.client_id?.toString() || ''}
+                onValueChange={(value) => {
+                  const selectedClient = clients?.find(c => c.client_id.toString() === value);
+                  setFormData(prev => ({
+                    ...prev,
+                    client_id: selectedClient ? selectedClient.client_id : null,
+                    client_nom: selectedClient ? selectedClient.nom : ''
+                  }));
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un client existant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients?.map((client) => (
+                    <SelectItem
+                      key={client.client_id}
+                      value={client.client_id.toString()}
+                    >
+                      {client.titre} {client.nom} {client.prenom} ({client.telephone})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="client_nom">Nom du client</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (onOpenClientForm) {
+                      onOpenClientForm();
+                    } else {
+                      setClientFormOpen(true);
+                    }
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Nouveau
+                </Button>
+              </div>
               <Input
                 id="client_nom"
                 value={formData.client_nom || ''}
@@ -329,11 +490,21 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
                     <SelectValue placeholder="Sélectionner un véhicule" />
                   </SelectTrigger>
                   <SelectContent>
-                    {vehiculesList?.map((vehicule) => (
-                      <SelectItem key={vehicule.vehicule_id} value={vehicule.vehicule_id.toString()}>
-                        {vehicule.marque} {vehicule.modele} <span className="text-muted-foreground text-xs">({vehicule.categorie})</span>
-                      </SelectItem>
-                    ))}
+                    {vehiculesList?.map((vehicule) => {
+                      const isOccupe = vehicule.etat_occupation === 'occupe';
+                      return (
+                        <SelectItem
+                          key={vehicule.vehicule_id}
+                          value={vehicule.vehicule_id.toString()}
+                          className={isOccupe ? "text-orange-600" : ""}
+                        >
+                          {vehicule.immatriculation} {vehicule.marque} {vehicule.modele}
+                          {isOccupe && (
+                            <Badge variant="destructive" className="ml-2 text-xs">Occupé</Badge>
+                          )}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -347,15 +518,57 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
                     <SelectValue placeholder="Sélectionner un chauffeur" />
                   </SelectTrigger>
                   <SelectContent>
-                    {chauffeursList?.map((chauffeur) => (
-                      <SelectItem key={chauffeur.chauffeur_id} value={chauffeur.chauffeur_id.toString()}>
-                        {chauffeur.prenom} {chauffeur.nom}
-                      </SelectItem>
-                    ))}
+                    {chauffeursList?.map((chauffeur) => {
+                      const isOccupe = chauffeur.disponibilite === 'Occupé'; // Supposons que le champ disponibilité indique l'état
+                      return (
+                        <SelectItem
+                          key={chauffeur.chauffeur_id}
+                          value={chauffeur.chauffeur_id.toString()}
+                          className={isOccupe ? "text-orange-600" : ""}
+                        >
+                          {chauffeur.prenom} {chauffeur.nom}
+                          {isOccupe && (
+                            <Badge variant="destructive" className="ml-2 text-xs">Occupé</Badge>
+                          )}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {/* Affichage des conflits potentiels */}
+            {(chauffeurConflits.length > 0 || vehiculeConflits.length > 0) && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mt-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-yellow-800">Conflits de disponibilité détectés</h4>
+                    {chauffeurConflits.length > 0 && (
+                      <div className="mt-1 text-sm text-yellow-700">
+                        <p>Chauffeur occupé pour ces missions :</p>
+                        <ul className="list-disc list-inside mt-1">
+                          {chauffeurConflits.map((conflit, index) => (
+                            <li key={index}>Mission #{conflit.mission_id} : {conflit.lieu_depart} → {conflit.lieu_arrivee}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {vehiculeConflits.length > 0 && (
+                      <div className="mt-1 text-sm text-yellow-700">
+                        <p>Véhicule occupé pour ces missions :</p>
+                        <ul className="list-disc list-inside mt-1">
+                          {vehiculeConflits.map((conflit, index) => (
+                            <li key={index}>Mission #{conflit.mission_id} : {conflit.lieu_depart} → {conflit.lieu_arrivee}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 pt-2">
               <div className="flex-1 p-3 bg-secondary/20 rounded-lg flex flex-col items-center justify-center border border-secondary/50">
@@ -368,7 +581,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
           </div>
 
           {/* Section 3 : Paiement (Seulement en création) */}
-          {!isEditing && (
+          {!mission && (
             <div className="space-y-4 p-4 border rounded-lg bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-800">
               <h3 className="font-semibold text-sm flex items-center gap-2 text-green-700 dark:text-green-400">
                 <span className="flex items-center justify-center w-5 h-5 rounded-full bg-green-600 text-white text-xs">3</span>
@@ -438,20 +651,14 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
             </Button>
             <Button
               type="submit"
-              disabled={createTransactionMutation.isPending || updateMutation.isPending}
+              disabled={!isFormValid}
               className="min-w-[150px]"
             >
-              {createTransactionMutation.isPending || updateMutation.isPending ? (
-                "Traitement..."
-              ) : isEditing ? (
-                "Enregistrer modifs"
-              ) : (
-                formData.acompte && formData.acompte > 0 ? `Encaisser & Réserver` : "Réserver (Crédit)"
-              )}
+              {mission ? 'Enregistrer modifs' : (formData.acompte && formData.acompte > 0 ? 'Encaisser & Réserver' : 'Réserver (Crédit)')}
             </Button>
           </div>
         </form>
-      </DialogContent >
-    </Dialog >
+      </DialogContent>
+    </Dialog>
   );
 }

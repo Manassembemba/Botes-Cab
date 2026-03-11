@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -111,6 +111,9 @@ export function VehiculeFormDialog({ open, onOpenChange, vehicule }: VehiculeFor
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Modifier le véhicule' : 'Ajouter un véhicule'}</DialogTitle>
+          <DialogDescription>
+            {isEditing ? 'Modifiez les détails du véhicule ci-dessous.' : 'Enregistrez les informations d\'un nouveau véhicule dans le système.'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

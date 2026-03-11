@@ -70,12 +70,11 @@ export function MissionCompletionDialog({
         if (mission) {
             // Déterminer la charge par défaut selon le type de course
             const type = mission.type_course || '';
-            const isDaily = type.includes('Journée') || type.toLowerCase().includes('journalière');
+            const isAeroport = type.includes('Aéroport');
 
-            // Règle: Journalière -> Client (Charge Entreprise = OFF)
             // Règle: Aéroport -> Entreprise (Charge Entreprise = ON)
-            // Par défaut (Urbain/Autre) -> Entreprise
-            const defaultChargeEntreprise = !isDaily;
+            // Règle: Autre (Urbain/Journée/Interurbain) -> Client (Charge Entreprise = OFF)
+            const defaultChargeEntreprise = isAeroport;
 
             form.reset({
                 montant: 0,
@@ -87,7 +86,22 @@ export function MissionCompletionDialog({
     }, [mission, form]);
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
-        if (!mission) return;
+        if (!mission) {
+            toast({
+                title: 'Erreur',
+                description: 'Aucune mission sélectionnée.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        console.log('Données envoyées à la fonction RPC:', {
+            missionId: mission.mission_id,
+            montant: values.montant,
+            devise: values.devise,
+            raison: values.raison,
+            isChargeEntreprise: values.isChargeEntreprise,
+        });
 
         try {
             await completeMutation.mutateAsync({
@@ -105,10 +119,28 @@ export function MissionCompletionDialog({
                     : 'La mission a été clôturée avec succès.',
             });
             onOpenChange(false);
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Erreur complète:', error);
+            
+            // Extraire le message d'erreur spécifique de Supabase
+            let errorMessage = 'Impossible de clôturer la mission.';
+            
+            if (error && typeof error === 'object') {
+                // Vérifier si c'est une erreur Supabase avec message spécifique
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.body?.message) {
+                    errorMessage = error.body.message;
+                } else if (error.error?.message) {
+                    errorMessage = error.error.message;
+                }
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+            
             toast({
-                title: 'Erreur',
-                description: 'Impossible de clôturer la mission.',
+                title: 'Erreur lors de la clôture',
+                description: errorMessage,
                 variant: 'destructive',
             });
         }

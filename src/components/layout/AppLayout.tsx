@@ -8,8 +8,8 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-background dark">
       <AppSidebar />
-      
-      <div className="pl-64">
+
+      <div className="lg:pl-64">
         {/* Header */}
         <header className="sticky top-0 z-30 h-16 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="flex h-full items-center justify-between px-6">
@@ -23,7 +23,7 @@ export function AppLayout() {
                 />
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
@@ -34,7 +34,7 @@ export function AppLayout() {
             </div>
           </div>
         </header>
-        
+
         {/* Main Content */}
         <main className="p-6">
           <Outlet />

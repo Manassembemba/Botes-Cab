@@ -16,6 +16,7 @@ import Accounting from "./pages/Accounting";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Documents from "./pages/Documents";
+import Clients from "./pages/Clients";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -27,7 +28,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route element={<ProtectedRoute />}>
@@ -36,6 +37,7 @@ const App = () => (
                 <Route path="/vehicles" element={<Vehicles />} />
                 <Route path="/drivers" element={<Drivers />} />
                 <Route path="/missions" element={<Missions />} />
+                <Route path="/clients" element={<Clients />} />
                 <Route path="/maintenance" element={<Maintenance />} />
                 <Route path="/remboursements" element={<Remboursements />} />
                 <Route path="/accounting" element={<Accounting />} />

@@ -149,11 +149,11 @@ export function useCompleteMission() {
       raison?: string;
       isChargeEntreprise: boolean;
     }) => {
-      const { error } = await supabase.rpc('complete_mission_with_fuel', {
+      const { error } = await supabase.rpc('complete_mission_simple', {
         p_mission_id: missionId,
         p_montant: montant,
         p_devise: devise,
-        p_raison: raison,
+        p_raison: raison || null,
         p_is_charge_entreprise: isChargeEntreprise
       });
 

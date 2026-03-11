@@ -55,7 +55,7 @@ function LoginForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; s
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       emailSchema.parse(email);
       passwordSchema.parse(password);
@@ -71,6 +71,7 @@ function LoginForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; s
     setIsSubmitting(false);
 
     if (error) {
+      console.error('❌ [Auth] SignIn Error:', error);
       if (error.message.includes('Invalid login credentials')) {
         toast.error('Email ou mot de passe incorrect');
       } else {
