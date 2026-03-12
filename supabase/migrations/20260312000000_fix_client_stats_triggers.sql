@@ -46,13 +46,32 @@ COMMENT ON TRIGGER update_client_stats_on_status_change ON public.tb_missions IS
 CREATE OR REPLACE FUNCTION public.recalculate_all_client_stats()
 RETURNS VOID AS $$
 DECLARE
-    client_record RECORD;
+    client_rec RECORD;
+    v_missions INTEGER;
+    v_total NUMERIC;
+    v_derniere_date TIMESTAMPTZ;
 BEGIN
     -- Boucler sur tous les clients
-    FOR client_record IN SELECT client_id FROM public.tb_clients
+    FOR client_rec IN SELECT * FROM tb_clients
     LOOP
-        -- Mettre à jour les stats pour chaque client
-        PERFORM public.check_client_fidelite(client_record.client_id);
+        -- Calculer les vraies valeurs
+        SELECT 
+            COUNT(*),
+            COALESCE(SUM(m.montant_total), 0),
+            MAX(m.date_arrivee_reelle)
+        INTO v_missions, v_total, v_derniere_date
+        FROM tb_missions m
+        WHERE m.client_id = client_rec.client_id 
+        AND m.statut_mission = 'Terminée';
+        
+        -- Mettre à jour le client
+        UPDATE tb_clients
+        SET 
+            nb_missions_total = COALESCE(v_missions, 0),
+            montant_total_depense = COALESCE(v_total, 0),
+            derniere_mission_date = v_derniere_date,
+            est_fidele = (COALESCE(v_missions, 0) >= 10 OR COALESCE(v_total, 0) >= 1000)
+        WHERE client_id = client_rec.client_id;
     END LOOP;
     
     RAISE NOTICE 'Stats recalculées pour tous les clients';
