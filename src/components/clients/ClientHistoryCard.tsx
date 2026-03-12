@@ -24,7 +24,7 @@ export function ClientHistoryCard({ client }: ClientHistoryCardProps) {
           )}
         </div>
         <div className="text-sm text-muted-foreground">
-          {client.telephone} • {client.email}
+          {client.telephone}
         </div>
       </CardHeader>
       <CardContent className="p-4">

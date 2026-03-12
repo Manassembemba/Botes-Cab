@@ -30,7 +30,6 @@ const formSchema = z.object({
   nom: z.string().min(1, 'Le nom est requis'),
   prenom: z.string().optional(),
   telephone: z.string().optional(),
-  email: z.string().email('Email invalide').optional().nullable(),
   adresse: z.string().optional(),
   est_fidele: z.boolean().default(false),
 });
@@ -53,7 +52,6 @@ export function ClientFormDialog({ open, onOpenChange, client, onClientCreated }
       nom: client?.nom || '',
       prenom: client?.prenom || '',
       telephone: client?.telephone || '',
-      email: client?.email || '',
       adresse: client?.adresse || '',
       est_fidele: client?.est_fidele || false,
     },
@@ -150,19 +148,6 @@ export function ClientFormDialog({ open, onOpenChange, client, onClientCreated }
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Plus, ArrowUpRight, ArrowDownLeft, Wallet, Receipt, History, Calendar as CalendarIcon, Filter } from 'lucide-react';
+import { Plus, ArrowUpRight, ArrowDownLeft, Wallet, Receipt, History, Calendar as CalendarIcon, Filter, Car } from 'lucide-react';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -352,6 +352,7 @@ export default function Accounting() {
                             <tr className="border-b border-border bg-muted/50">
                                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Type</th>
                                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Véhicule</th>
                                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Description</th>
                                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Source</th>
                                 <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Montant</th>
@@ -369,6 +370,23 @@ export default function Accounting() {
                                     </td>
                                     <td className="px-4 py-3 text-sm text-foreground">
                                         {t.date_transaction ? format(new Date(t.date_transaction), 'dd/MM/yyyy HH:mm', { locale: fr }) : '-'}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {'vehicule_immatriculation' in t && t.vehicule_immatriculation ? (
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                                                    <Car className="h-4 w-4 text-primary" />
+                                                    <span>{t.vehicule_immatriculation}</span>
+                                                </div>
+                                                {t.vehicule_marque_modele && (
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        {t.vehicule_marque_modele}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <span className="text-sm text-muted-foreground italic">-</span>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-foreground max-w-xs truncate">
                                         {t.description}

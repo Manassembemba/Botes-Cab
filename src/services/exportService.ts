@@ -5,10 +5,11 @@ import { fr } from 'date-fns/locale';
 import { TransactionWithDetails } from '@/hooks/useCaisse';
 
 export const exportToCSV = (transactions: TransactionWithDetails[], fileName: string) => {
-    const headers = ['Type', 'Date', 'Description', 'Source', 'Montant', 'Devise'];
+    const headers = ['Type', 'Date', 'Véhicule', 'Description', 'Source', 'Montant', 'Devise'];
     const rows = transactions.map(t => [
         t.type,
         t.date_transaction ? format(new Date(t.date_transaction), 'dd/MM/yyyy HH:mm') : '',
+        t.vehicule_immatriculation || '-',
         t.description?.replace(/,/g, ';') || '',
         t.source_type || 'Manuel',
         t.montant,
@@ -86,10 +87,11 @@ export const exportToPDF = (
     doc.setFontSize(10);
 
     // Tableau des transactions
-    const tableColumn = ["Type", "Date", "Description", "Source", "Montant"];
+    const tableColumn = ["Type", "Date", "Véhicule", "Description", "Source", "Montant"];
     const tableRows = transactions.map(t => [
         t.type,
         t.date_transaction ? format(new Date(t.date_transaction), 'dd/MM/yyyy HH:mm') : '',
+        t.vehicule_immatriculation || '-',
         t.description || '',
         t.source_type || 'Manuel',
         `${t.type === 'Entrée' ? '+' : '-'}${t.montant.toLocaleString()} ${t.devise}`
@@ -102,11 +104,11 @@ export const exportToPDF = (
         theme: 'striped',
         headStyles: { fillColor: [41, 128, 185], textColor: 255 },
         columnStyles: {
-            4: { halign: 'right' }
+            5: { halign: 'right' }
         },
         didDrawCell: (data: any) => {
             // Coloration du montant
-            if (data.section === 'body' && data.column.index === 4) {
+            if (data.section === 'body' && data.column.index === 5) {
                 const text = data.cell.raw as string;
                 if (text.startsWith('+')) {
                     doc.setTextColor(39, 174, 96); // Vert

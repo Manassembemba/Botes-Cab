@@ -8,6 +8,9 @@ export type TransactionWithDetails = TransactionCaisse & {
     mission_solde?: number;
     mission_total?: number;
     mission_reference?: string;
+    vehicule_immatriculation?: string;
+    vehicule_marque_modele?: string;
+    chauffeur_nom?: string;
 };
 
 export function useCaisse() {
@@ -55,10 +58,19 @@ export function useCaisse() {
 
             if (missionIdsToCheck.size === 0) return transactions as TransactionWithDetails[];
 
-            // 5. Récupérer les infos de ces missions
+            // 5. Récupérer les infos de ces missions (avec véhicules et chauffeurs)
             const { data: missions, error: missionsError } = await supabase
                 .from('tb_missions')
-                .select('mission_id, solde, montant_total, type_course')
+                .select(`
+                    mission_id, 
+                    solde, 
+                    montant_total, 
+                    type_course,
+                    vehicule_id,
+                    chauffeur_id,
+                    vehicule:tb_vehicules(immatriculation, marque, modele),
+                    chauffeur:tb_chauffeurs(nom, prenom)
+                `)
                 .in('mission_id', Array.from(missionIdsToCheck));
 
             if (missionsError) {
@@ -66,7 +78,37 @@ export function useCaisse() {
                 return transactions as TransactionWithDetails[];
             }
 
-            // 6. Mapper les données
+            // 6. Récupérer les véhicules pour les dépenses directes
+            const depenseIds = transactions
+                .filter(t => (t.source_type === 'Depense' || t.source_type === 'depense') && t.source_id)
+                .map(t => t.source_id);
+
+            let depensesVehiculesMap = new Map<number, { immatriculation: string; marque_modele: string; chauffeur_nom?: string }>();
+
+            if (depenseIds.length > 0) {
+                const { data: depenses, error: depensesError } = await supabase
+                    .from('tb_depenses')
+                    .select(`
+                        depense_id,
+                        vehicule_id,
+                        chauffeur_id,
+                        vehicule:tb_vehicules(immatriculation, marque, modele),
+                        chauffeur:tb_chauffeurs(nom, prenom)
+                    `)
+                    .in('depense_id', depenseIds);
+
+                if (!depensesError && depenses) {
+                    depenses.forEach(d => {
+                        depensesVehiculesMap.set(d.depense_id, {
+                            immatriculation: d.vehicule?.immatriculation || '',
+                            marque_modele: d.vehicule ? `${d.vehicule.marque} ${d.vehicule.modele}` : '',
+                            chauffeur_nom: d.chauffeur ? `${d.chauffeur.prenom} ${d.chauffeur.nom}` : undefined
+                        });
+                    });
+                }
+            }
+
+            // 7. Mapper les données
             const missionsMap = new Map(missions?.map(m => [m.mission_id, m]));
 
             return transactions.map(t => {
@@ -88,10 +130,27 @@ export function useCaisse() {
                             ...t,
                             mission_solde: mission.solde,
                             mission_total: mission.montant_total,
-                            mission_reference: mission.type_course
+                            mission_reference: mission.type_course,
+                            vehicule_immatriculation: mission.vehicule?.immatriculation || '',
+                            vehicule_marque_modele: mission.vehicule ? `${mission.vehicule.marque} ${mission.vehicule.modele}` : '',
+                            chauffeur_nom: mission.chauffeur ? `${mission.chauffeur.prenom} ${mission.chauffeur.nom}` : undefined
                         };
                     }
                 }
+                
+                // Cas 3: Dépense directe
+                if ((t.source_type === 'Depense' || t.source_type === 'depense') && t.source_id) {
+                    const depenseInfo = depensesVehiculesMap.get(t.source_id);
+                    if (depenseInfo) {
+                        return {
+                            ...t,
+                            vehicule_immatriculation: depenseInfo.immatriculation,
+                            vehicule_marque_modele: depenseInfo.marque_modele,
+                            chauffeur_nom: depenseInfo.chauffeur_nom
+                        };
+                    }
+                }
+                
                 return t;
             }) as TransactionWithDetails[];
         },

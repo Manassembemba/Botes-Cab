@@ -17,12 +17,11 @@ export default function Clients() {
   const [activeTab, setActiveTab] = useState<'all' | 'fidele'>('all');
 
   const filteredClients = clients?.filter(client => {
-    const matchesSearch = 
+    const matchesSearch =
       client.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
       client.prenom?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.telephone?.includes(searchQuery) ||
-      client.email?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+      client.telephone?.includes(searchQuery);
+
     return matchesSearch;
   }) || [];
 
@@ -47,8 +46,8 @@ export default function Clients() {
     );
   }
 
-  const displayedClients = activeTab === 'fidele' 
-    ? clientsFideles || [] 
+  const displayedClients = activeTab === 'fidele'
+    ? clientsFideles || []
     : filteredClients;
 
   return (
@@ -111,8 +110,8 @@ export default function Clients() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {displayedClients.length > 0 ? (
           displayedClients.map((client) => (
-            <div 
-              key={client.client_id} 
+            <div
+              key={client.client_id}
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => handleEdit(client)}
             >
@@ -123,16 +122,16 @@ export default function Clients() {
           <div className="col-span-full text-center py-12">
             <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
-              {searchQuery 
-                ? 'Aucun client trouvé pour cette recherche' 
-                : activeTab === 'fidele' 
-                  ? 'Aucun client fidèle enregistré' 
+              {searchQuery
+                ? 'Aucun client trouvé pour cette recherche'
+                : activeTab === 'fidele'
+                  ? 'Aucun client fidèle enregistré'
                   : 'Aucun client enregistré'}
             </p>
             {activeTab === 'all' && !searchQuery && (
-              <Button 
-                variant="outline" 
-                className="mt-4" 
+              <Button
+                variant="outline"
+                className="mt-4"
                 onClick={() => setFormOpen(true)}
               >
                 <Plus className="h-4 w-4 mr-2" />

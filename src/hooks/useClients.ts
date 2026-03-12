@@ -24,7 +24,6 @@ export function useClients() {
           nom,
           prenom,
           telephone,
-          email,
           adresse,
           titre,
           date_inscription,
@@ -50,10 +49,19 @@ export function useClient(id: number) {
       const { data, error } = await supabase
         .from('tb_clients')
         .select(`
-          *,
+          client_id,
+          nom,
+          prenom,
+          telephone,
+          adresse,
+          titre,
+          date_inscription,
+          est_fidele,
           nb_missions_total,
           montant_total_depense,
-          derniere_mission_date
+          derniere_mission_date,
+          created_at,
+          updated_at
         `)
         .eq('client_id', id)
         .single();
@@ -150,7 +158,21 @@ export function useFideliteClients() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tb_clients')
-        .select('*')
+        .select(`
+          client_id,
+          nom,
+          prenom,
+          telephone,
+          adresse,
+          titre,
+          date_inscription,
+          est_fidele,
+          nb_missions_total,
+          montant_total_depense,
+          derniere_mission_date,
+          created_at,
+          updated_at
+        `)
         .eq('est_fidele', true)
         .order('montant_total_depense', { ascending: false });
 
