@@ -39,9 +39,20 @@ import { useAvailableVehiculesInRange } from '@/hooks/useAvailableVehicules';
 import { useTarifs } from '@/hooks/useTarifs';
 import { useToast } from '@/hooks/use-toast';
 import { Info, AlertCircle, CreditCard, Banknote, Landmark, Calendar, Clock, Plus } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { useClients } from '@/hooks/useClients';
 import { useVehiculeAvailability, useChauffeurAvailability } from '@/hooks/useAvailability';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { cn } from '@/lib/utils';
 
 const statutOptions = [
@@ -73,6 +84,13 @@ const formSchema = z.object({
   devise: z.string().min(1, 'La devise est requise'),
   kilometrage_fin: z.number().nullable(),
   type_course: z.string().min(1, 'Le type de course est requis'),
+}).refine((data) => {
+  const start = new Date(data.date_depart_prevue);
+  const end = new Date(data.date_arrivee_prevue);
+  return end > start;
+}, {
+  message: "La date de retour doit être après la date de départ",
+  path: ["date_arrivee_prevue"],
 });
 
 interface MissionFormDialogProps {
@@ -105,6 +123,7 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [clientFormOpen, setClientFormOpen] = useState(false);
+  const [isManualPrice, setIsManualPrice] = useState(false);
 
   const { data: chauffeurs } = useChauffeurs();
   const { data: vehicules } = useVehicules();
@@ -130,7 +149,8 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
   // États pour les conflits
   const [chauffeurConflits, setChauffeurConflits] = useState<any[]>([]);
   const [vehiculeConflits, setVehiculeConflits] = useState<any[]>([]);
-  const [showConflits, setShowConflits] = useState(false);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // En mode édition, on affiche toutes les ressources.
   const chauffeursList = mission
@@ -232,8 +252,8 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
 
   // Calcul automatique du tarif basé sur la catégorie du véhicule et le type de course
   useEffect(() => {
-    if (mission) return; // Ne pas écraser le prix en édition
-    if (!formData.vehicule_id || !formData.type_course || !tarifs || !vehicules) return;
+    if (mission || isManualPrice) return; // Ne pas écraser le prix en édition ou si manuel
+    if (!formData.vehicule_id || !formData.type_course || !tarifs || !vehicules || !formData.date_depart_prevue || !formData.date_arrivee_prevue) return;
 
     const selectedVehicule = vehicules.find(v => v.vehicule_id === formData.vehicule_id);
     if (!selectedVehicule) return;
@@ -244,18 +264,84 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
     );
 
     if (tarif) {
+      let finalPrice = Number(tarif.prix_base);
+      
+      // Si c'est une mise à disposition par journée, on calcule au prorata des jours
+      if (formData.type_course === 'Mise à disposition (Journée)') {
+        // Ajuster automatiquement les heures à 08:00 et 20:00 si ce n'est pas déjà le cas
+        // et qu'on vient de changer le type de course
+        setFormData(prev => {
+          const newFormData = { ...prev };
+          let updated = false;
+
+          if (prev.date_depart_prevue && !prev.date_depart_prevue.includes('T08:00')) {
+             const d = new Date(prev.date_depart_prevue);
+             d.setHours(8, 0, 0, 0);
+             // Format ISO local pour l'input datetime-local
+             const offset = d.getTimezoneOffset() * 60000;
+             newFormData.date_depart_prevue = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+             updated = true;
+          }
+
+          if (prev.date_arrivee_prevue && !prev.date_arrivee_prevue.includes('T20:00')) {
+             const d = new Date(prev.date_arrivee_prevue);
+             d.setHours(20, 0, 0, 0);
+             const offset = d.getTimezoneOffset() * 60000;
+             newFormData.date_arrivee_prevue = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+             updated = true;
+          }
+
+          return updated ? newFormData : prev;
+        });
+
+        const start = new Date(formData.date_depart_prevue);
+        const end = new Date(formData.date_arrivee_prevue);
+        
+        // Calcul du nombre de jours (chaque jour entamé compte pour un jour de mise à disposition)
+        // On normalise les dates pour ignorer l'heure précise et compter les jours calendaires
+        const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        
+        const diffTime = Math.abs(endDay.getTime() - startDay.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        
+        finalPrice = Number(tarif.prix_base) * diffDays;
+        
+        toast({
+          title: "Calcul automatique",
+          description: `Prix calculé pour ${diffDays} jour(s) de mise à disposition.`,
+          duration: 3000
+        });
+      }
+
       setFormData(prev => ({
         ...prev,
-        montant_total: Number(tarif.prix_base),
+        montant_total: finalPrice,
         devise: tarif.devise || prev.devise,
-        // Si on a un acompte pré-saisi qui dépasse le nouveau total, on le reset ou on le garde ?
-        // On le garde pour l'instant, le solde s'ajustera
       }));
     }
-  }, [formData.vehicule_id, formData.type_course, tarifs, vehicules, mission]);
+  }, [formData.vehicule_id, formData.type_course, tarifs, vehicules, mission, isManualPrice, formData.date_depart_prevue, formData.date_arrivee_prevue]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationErrors({});
+
+    // Validation avec Zod
+    const validation = formSchema.safeParse(formData);
+    if (!validation.success) {
+      const errors: Record<string, string> = {};
+      validation.error.issues.forEach(issue => {
+        errors[issue.path[0]] = issue.message;
+      });
+      setValidationErrors(errors);
+      
+      toast({
+        title: 'Erreur de validation',
+        description: Object.values(errors)[0],
+        variant: 'destructive'
+      });
+      return;
+    }
 
     if (!formData.chauffeur_id || !formData.vehicule_id) {
       toast({
@@ -267,8 +353,6 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
     }
 
     // Validation paiement si acompte > 0 en création
-    console.log("📝 [Mission Form] Submitting with data:", formData);
-
     if (!mission && formData.acompte && formData.acompte > 0 && !selectedPaymentMethod) {
       toast({
         title: 'Paiement requis',
@@ -278,21 +362,16 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
       return;
     }
 
-    // Afficher un avertissement si des conflits existent
+    // Vérifier les conflits
     if (chauffeurConflits.length > 0 || vehiculeConflits.length > 0) {
-      const continueAnyway = await new Promise<boolean>((resolve) => {
-        if (window.confirm('Des conflits de disponibilité ont été détectés. Voulez-vous continuer ?')) {
-          resolve(true);
-        } else {
-          resolve(false);
-        }
-      });
-
-      if (!continueAnyway) {
-        return;
-      }
+      setShowConflictDialog(true);
+      return;
     }
 
+    executeSubmit();
+  };
+
+  const executeSubmit = async () => {
     try {
       if (mission) {
         // Mise à jour
@@ -315,7 +394,6 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
       onOpenChange(false);
     } catch (error) {
       console.error('Erreur submission:', error);
-      console.log('🔍 [Mission Form] Full Error Object:', JSON.stringify(error, null, 2));
       toast({
         title: 'Erreur',
         description: error instanceof Error ? error.message : 'Une erreur est survenue',
@@ -361,11 +439,20 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
                   setFormData(prev => ({
                     ...prev,
                     client_id: selectedClient ? selectedClient.client_id : null,
-                    client_nom: selectedClient ? selectedClient.nom : ''
+                    client_nom: selectedClient ? `${selectedClient.nom} ${selectedClient.prenom || ''}`.trim() : '',
+                    // Proposer l'adresse du client comme lieu de départ si elle existe
+                    lieu_depart: (selectedClient?.adresse && !prev.lieu_depart) ? selectedClient.adresse : prev.lieu_depart
                   }));
+
+                  if (selectedClient?.adresse) {
+                    toast({
+                      title: "Adresse client détectée",
+                      description: `L'adresse "${selectedClient.adresse}" a été suggérée comme lieu de départ.`,
+                      duration: 3000
+                    });
+                  }
                 }}
-              >
-                <SelectTrigger>
+              >                <SelectTrigger>
                   <SelectValue placeholder="Sélectionner un client existant" />
                 </SelectTrigger>
                 <SelectContent>
@@ -410,30 +497,42 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="date_depart_prevue">Départ</Label>
-                <Input
-                  id="date_depart_prevue"
-                  type="datetime-local"
+                <Label>Départ</Label>
+                <DateTimePicker
                   value={formData.date_depart_prevue}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date_depart_prevue: e.target.value }))}
-                  required
+                  onChange={(val) => setFormData(prev => ({ ...prev, date_depart_prevue: val }))}
+                  error={validationErrors.date_depart_prevue}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="date_arrivee_prevue">Arrivée (Retour)</Label>
-                <Input
-                  id="date_arrivee_prevue"
-                  type="datetime-local"
+                <Label>Arrivée (Retour)</Label>
+                <DateTimePicker
                   value={formData.date_arrivee_prevue}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date_arrivee_prevue: e.target.value }))}
-                  required
+                  onChange={(val) => setFormData(prev => ({ ...prev, date_arrivee_prevue: val }))}
+                  error={validationErrors.date_arrivee_prevue}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="lieu_depart">Lieu de départ</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="lieu_depart">Lieu de départ</Label>
+                  {formData.client_id && clients?.find(c => c.client_id === formData.client_id)?.adresse && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 text-primary"
+                      onClick={() => {
+                        const addr = clients?.find(c => c.client_id === formData.client_id)?.adresse;
+                        if (addr) setFormData(prev => ({ ...prev, lieu_depart: addr }));
+                      }}
+                    >
+                      Utiliser adresse client
+                    </Button>
+                  )}
+                </div>
                 <Input
                   id="lieu_depart"
                   value={formData.lieu_depart}
@@ -570,13 +669,63 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
               </div>
             )}
 
-            <div className="flex items-center gap-2 pt-2">
-              <div className="flex-1 p-3 bg-secondary/20 rounded-lg flex flex-col items-center justify-center border border-secondary/50">
-                <span className="text-xs text-muted-foreground uppercase font-bold">Total à Payer</span>
-                <span className="text-2xl font-bold text-primary">
-                  {formData.montant_total?.toLocaleString()} {formData.devise}
-                </span>
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground uppercase font-bold">Prix de la course</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">Saisie manuelle</span>
+                  <input
+                    type="checkbox"
+                    checked={isManualPrice}
+                    onChange={(e) => setIsManualPrice(e.target.checked)}
+                    className="h-3 w-3 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                </div>
               </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 relative">
+                  <Input
+                    type="number"
+                    value={formData.montant_total || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, montant_total: parseFloat(e.target.value) || 0 }))}
+                    className={cn(
+                      "text-2xl font-bold text-center h-14 bg-secondary/10 border-secondary/50",
+                      !isManualPrice && "opacity-80"
+                    )}
+                    readOnly={!isManualPrice && !mission} // Permettre l'édition en mode mission (édition) ou si manuel
+                  />
+                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none font-bold text-primary gap-2">
+                    {formData.type_course === 'Mise à disposition (Journée)' && (
+                       <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] h-6">
+                         {Math.ceil(Math.abs(new Date(formData.date_arrivee_prevue).getTime() - new Date(formData.date_depart_prevue).getTime()) / (1000 * 60 * 60 * 24)) + 1} j
+                       </Badge>
+                    )}
+                    {formData.devise}
+                  </div>
+                </div>
+
+                <div className="w-24">
+                  <Select
+                    value={formData.devise}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, devise: value }))}
+                  >
+                    <SelectTrigger className="h-14 font-bold">
+                      <SelectValue placeholder="Devise" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="CDF">CDF</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {!isManualPrice && !mission && (
+                <p className="text-[10px] text-center text-muted-foreground italic">
+                  Le prix est calculé automatiquement selon le véhicule et le type de course. Activez "Saisie manuelle" pour le modifier.
+                </p>
+              )}
             </div>
           </div>
 
@@ -657,8 +806,32 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
               {mission ? 'Enregistrer modifs' : (formData.acompte && formData.acompte > 0 ? 'Encaisser & Réserver' : 'Réserver (Crédit)')}
             </Button>
           </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
+          </form>
+
+          <AlertDialog open={showConflictDialog} onOpenChange={setShowConflictDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-yellow-600 flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                Conflits de disponibilité
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Des conflits ont été détectés pour les ressources sélectionnées sur cette période. 
+                Voulez-vous tout de même enregistrer cette mission ?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                setShowConflictDialog(false);
+                executeSubmit();
+              }}>
+                Continuer quand même
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+          </AlertDialog>
+          </DialogContent>
+          </Dialog >
+          );
+          }

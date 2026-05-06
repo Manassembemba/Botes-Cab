@@ -1,4 +1,6 @@
 import { useMissions, useDeleteMission, useUpdateMission, type MissionWithDetails, type Mission } from '@/hooks/useMissions';
+import { useChauffeurs } from '@/hooks/useChauffeurs';
+import { useVehicules } from '@/hooks/useVehicules';
 import { MissionFormDialog } from '@/components/missions/MissionFormDialog';
 import { MissionPaymentDialog } from '@/components/missions/MissionPaymentDialog';
 import { MissionCompletionDialog } from '@/components/missions/MissionCompletionDialog';
@@ -6,11 +8,20 @@ import { ClientFormDialog } from '@/components/clients/ClientFormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Calendar, MapPin, Car, ChevronLeft, ChevronRight, Pencil, Trash2, LayoutList, CalendarDays, DollarSign, Play, CheckCircle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Plus, Search, Calendar, MapPin, Car, ChevronLeft, ChevronRight, Pencil, Trash2, LayoutList, CalendarDays, DollarSign, Play, CheckCircle, Copy, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { MissionCalendar } from '@/components/missions/MissionCalendar';
-import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { startOfDay, endOfDay, isWithinInterval, isToday as isDateToday } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,13 +32,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  'Planifiée': { label: 'Planifiée', className: 'bg-status-assigned/20 text-status-assigned border-status-assigned/30' },
-  'En cours': { label: 'En cours', className: 'bg-status-available/20 text-status-available border-status-available/30' },
-  'Terminée': { label: 'Terminée', className: 'bg-muted text-muted-foreground border-border' },
-  'Annulée': { label: 'Annulée', className: 'bg-destructive/20 text-destructive border-destructive/30' },
-};
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { useState } from 'react';
 
 const statusFilters = [
   { label: 'Toutes', value: 'all' },
@@ -37,8 +50,6 @@ const statusFilters = [
   { label: 'Annulées', value: 'Annulée' },
 ];
 
-import { useState } from 'react';
-
 export default function Missions() {
   const { data: missions, isLoading, error } = useMissions();
   const deleteMutation = useDeleteMission();
@@ -47,9 +58,11 @@ export default function Missions() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [chauffeurFilter, setChauffeurFilter] = useState('all');
+  const [vehiculeFilter, setVehiculeFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showAllDates, setShowAllDates] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'planning'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'planning'>('planning');
   const [formOpen, setFormOpen] = useState(false);
   const [editingMission, setEditingMission] = useState<Mission | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -66,6 +79,9 @@ export default function Missions() {
   // States pour le dialogue client
   const [clientFormOpen, setClientFormOpen] = useState(false);
 
+  const { data: chauffeurs } = useChauffeurs();
+  const { data: vehicules } = useVehicules();
+
   const filteredMissions = missions?.filter((mission) => {
     // 1. Filtre Recherche (Priorité absolue)
     if (searchQuery) {
@@ -77,9 +93,15 @@ export default function Missions() {
       return matchesSearch && matchesStatus;
     }
 
-    // 2. Filtre Statut (Dropdown)
+    // 2. Filtres Dropdown
     const matchesStatusFilter = statusFilter === 'all' || mission.statut_mission === statusFilter;
     if (!matchesStatusFilter) return false;
+
+    const matchesChauffeurFilter = chauffeurFilter === 'all' || mission.chauffeur_id?.toString() === chauffeurFilter;
+    if (!matchesChauffeurFilter) return false;
+
+    const matchesVehiculeFilter = vehiculeFilter === 'all' || mission.vehicule_id?.toString() === vehiculeFilter;
+    if (!matchesVehiculeFilter) return false;
 
     // 3. Logique de Date & Visibilité "Intelligente"
     // Si la mission est 'En cours' ou 'Planifiée', on l'affiche TOUJOURS en vue Liste par défaut
@@ -113,6 +135,22 @@ export default function Missions() {
 
   const handleEdit = (mission: MissionWithDetails) => {
     setEditingMission(mission);
+    setFormOpen(true);
+  };
+
+  const handleDuplicate = (mission: MissionWithDetails) => {
+    // Créer une copie de la mission sans l'ID et avec le statut planifié
+    const duplicatedMission = {
+      ...mission,
+      mission_id: undefined,
+      statut_mission: 'Planifiée',
+      acompte: 0,
+      solde: mission.montant_total,
+      created_at: undefined,
+      updated_at: undefined
+    } as any;
+    
+    setEditingMission(duplicatedMission);
     setFormOpen(true);
   };
 
@@ -187,8 +225,8 @@ export default function Missions() {
       </div>
 
       {/* Date Navigation */}
-      <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl border border-border bg-card">
-        <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+      <div className="flex flex-col lg:flex-row items-center gap-4 p-4 rounded-xl border border-border bg-card">
+        <div className="flex items-center justify-between w-full lg:w-auto gap-4">
           <button
             onClick={() => navigateDate('prev')}
             disabled={showAllDates}
@@ -196,12 +234,32 @@ export default function Missions() {
           >
             <ChevronLeft className="h-5 w-5 text-muted-foreground" />
           </button>
-          <div className="flex items-center gap-3 min-w-[200px] justify-center">
-            <Calendar className={cn("h-5 w-5", showAllDates ? "text-muted-foreground" : "text-primary")} />
-            <span className={cn("text-lg font-semibold capitalize", showAllDates ? "text-muted-foreground line-through" : "text-foreground")}>
-              {formatDate(selectedDate)}
-            </span>
-          </div>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                disabled={showAllDates}
+                className={cn(
+                  "flex items-center gap-3 min-w-[200px] justify-center px-4 py-1 rounded-lg transition-colors",
+                  showAllDates ? "opacity-50 cursor-not-allowed" : "hover:bg-accent/50"
+                )}
+              >
+                <Calendar className={cn("h-5 w-5", showAllDates ? "text-muted-foreground" : "text-primary")} />
+                <span className={cn("text-lg font-semibold capitalize", showAllDates ? "text-muted-foreground line-through" : "text-foreground")}>
+                  {formatDate(selectedDate)}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              <CalendarComponent
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
           <button
             onClick={() => navigateDate('next')}
             disabled={showAllDates}
@@ -209,20 +267,61 @@ export default function Missions() {
           >
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </button>
+          
+          {!isDateToday(selectedDate) && !showAllDates && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedDate(new Date())}
+              className="text-xs h-8 px-3 ml-2 border-primary/20 text-primary hover:bg-primary/5"
+            >
+              Aujourd'hui
+            </Button>
+          )}
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
-          <span className={cn("text-sm font-medium", showAllDates ? "text-primary" : "text-muted-foreground")}>
-            {showAllDates ? "Toutes les dates" : "Filtrer par date"}
-          </span>
+        <div className="flex items-center gap-2 flex-wrap lg:ml-auto">
+          {/* Filtres Rapides */}
+          <div className="flex items-center gap-2 border-l border-border pl-4 mr-4 hidden xl:flex">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+            
+            <Select value={chauffeurFilter} onValueChange={setChauffeurFilter}>
+              <SelectTrigger className="h-8 w-[150px] text-xs">
+                <SelectValue placeholder="Chauffeur" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les chauffeurs</SelectItem>
+                {chauffeurs?.map(c => (
+                  <SelectItem key={c.chauffeur_id} value={c.chauffeur_id.toString()}>
+                    {c.prenom} {c.nom}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={vehiculeFilter} onValueChange={setVehiculeFilter}>
+              <SelectTrigger className="h-8 w-[150px] text-xs">
+                <SelectValue placeholder="Véhicule" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les véhicules</SelectItem>
+                {vehicules?.map(v => (
+                  <SelectItem key={v.vehicule_id} value={v.vehicule_id.toString()}>
+                    {v.immatriculation}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button
             variant={showAllDates ? "default" : "outline"}
             size="sm"
             onClick={() => setShowAllDates(!showAllDates)}
-            className="gap-2"
+            className="gap-2 h-8"
           >
             <CalendarDays className="h-4 w-4" />
-            {showAllDates ? "Voir agenda" : "Voir tout"}
+            {showAllDates ? "Masquer archives" : "Voir archives"}
           </Button>
         </div>
       </div>
@@ -296,7 +395,6 @@ export default function Missions() {
         /* Missions List */
         <div className="space-y-3">
           {filteredMissions.map((mission, index) => {
-            const status = statusConfig[mission.statut_mission] || statusConfig['Planifiée'];
             const startTime = new Date(mission.date_depart_prevue);
             const endTime = new Date(mission.date_arrivee_prevue);
 
@@ -329,9 +427,7 @@ export default function Missions() {
                         {mission.client_nom && (
                           <h3 className="font-semibold text-base text-foreground">{mission.client_nom}</h3>
                         )}
-                        <Badge variant="outline" className={cn('text-[10px] uppercase font-bold tracking-wider', status.className)}>
-                          {status.label}
-                        </Badge>
+                        <StatusBadge status={mission.statut_mission} className="text-[10px]" />
                         {mission.type_course && (
                           <Badge variant="secondary" className="text-[10px] bg-muted/50 text-muted-foreground border-none">
                             {mission.type_course}
@@ -452,6 +548,17 @@ export default function Missions() {
                     )}
 
                     <div className="flex gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={() => handleDuplicate(mission)}>
+                              <Copy className="h-4 w-4 text-blue-500" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Dupliquer cette mission</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(mission)}>
                         <Pencil className="h-4 w-4" />
                       </Button>

@@ -20,17 +20,32 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
-const navigation = [
-  { name: 'Tableau de Bord', href: '/', icon: LayoutDashboard },
-  { name: 'Véhicules', href: '/vehicles', icon: Car },
-  { name: 'Chauffeurs', href: '/drivers', icon: Users },
-  { name: 'Missions', href: '/missions', icon: CalendarClock },
-  { name: 'Clients', href: '/clients', icon: Users },
-  { name: 'Maintenance', href: '/maintenance', icon: Wrench },
-  { name: 'Remboursements', href: '/remboursements', icon: RefreshCcw },
-  { name: 'Comptabilité', href: '/accounting', icon: DollarSign },
-  { name: 'Documents', href: '/documents', icon: FileText },
-  { name: 'Rapports', href: '/reports', icon: BarChart3 },
+const navigationGroups = [
+  {
+    title: 'Opérations',
+    items: [
+      { name: 'Tableau de Bord', href: '/', icon: LayoutDashboard },
+      { name: 'Missions', href: '/missions', icon: CalendarClock },
+      { name: 'Chauffeurs', href: '/drivers', icon: Users },
+      { name: 'Véhicules', href: '/vehicles', icon: Car },
+    ]
+  },
+  {
+    title: 'Administration',
+    items: [
+      { name: 'Clients', href: '/clients', icon: Users },
+      { name: 'Maintenance', href: '/maintenance', icon: Wrench },
+      { name: 'Documents', href: '/documents', icon: FileText },
+    ]
+  },
+  {
+    title: 'Finance',
+    items: [
+      { name: 'Comptabilité', href: '/accounting', icon: DollarSign },
+      { name: 'Remboursements', href: '/remboursements', icon: RefreshCcw },
+      { name: 'Rapports', href: '/reports', icon: BarChart3 },
+    ]
+  }
 ];
 
 const bottomNavigation = [
@@ -94,37 +109,49 @@ export function AppSidebar() {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary shadow-lg shadow-sidebar-primary/20">
               <Truck className="h-5 w-5 text-sidebar-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-sidebar-primary-foreground">Botes CAB</h1>
-              <p className="text-xs text-sidebar-foreground">Fleet Management</p>
+              <h1 className="text-lg font-bold text-sidebar-primary-foreground tracking-tight">Botes CAB</h1>
+              <p className="text-[10px] uppercase tracking-widest font-semibold text-sidebar-foreground/50">Fleet Control</p>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-3 py-4">
-            {navigation.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                    isActive
-                      ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                  )}
-                  onClick={() => setIsMobileMenuOpen(false)} // Fermer le menu mobile après clic
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                </NavLink>
-              );
-            })}
-          </nav>
+          <div className="flex-1 overflow-y-auto px-3 py-4 custom-scrollbar">
+            {navigationGroups.map((group) => (
+              <div key={group.title} className="mb-6 last:mb-0">
+                <h3 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/40">
+                  {group.title}
+                </h3>
+                <nav className="space-y-1">
+                  {group.items.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <NavLink
+                        key={item.name}
+                        to={item.href}
+                        className={cn(
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 group',
+                          isActive
+                            ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md shadow-sidebar-primary/20'
+                            : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                        )}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <item.icon className={cn(
+                          "h-4 w-4 transition-transform duration-200 group-hover:scale-110",
+                          isActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/60 group-hover:text-sidebar-accent-foreground"
+                        )} />
+                        {item.name}
+                      </NavLink>
+                    );
+                  })}
+                </nav>
+              </div>
+            ))}
+          </div>
 
           {/* Bottom Navigation */}
           <div className="border-t border-sidebar-border px-3 py-4 space-y-1">

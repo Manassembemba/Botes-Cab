@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, LayoutGrid, List, Pencil, Trash2, Car, Gauge } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -17,13 +18,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-const statutConfig: Record<string, { label: string; className: string }> = {
-  'Libre': { label: 'Libre', className: 'bg-status-available/20 text-status-available border-status-available/30' },
-  'Affecté': { label: 'Affecté', className: 'bg-status-assigned/20 text-status-assigned border-status-assigned/30' },
-  'Maintenance': { label: 'En maintenance', className: 'bg-status-maintenance/20 text-status-maintenance border-status-maintenance/30' },
-  'Hors service': { label: 'Hors service', className: 'bg-status-offline/20 text-status-offline border-status-offline/30' },
-};
 
 const statusFilters = [
   { label: 'Tous', value: 'all' },
@@ -172,7 +166,6 @@ export default function Vehicles() {
       {viewMode === 'grid' ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredVehicules.map((vehicule, index) => {
-            const status = statutConfig[vehicule.statut] || statutConfig['Libre'];
             const needsRevision = revisionSoon(vehicule.date_prochaine_revision);
 
             return (
@@ -205,9 +198,7 @@ export default function Vehicles() {
                     <p className="text-sm text-muted-foreground">Année: {vehicule.annee_achat}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className={cn('text-[10px] uppercase font-bold tracking-wider', status.className)}>
-                      {status.label}
-                    </Badge>
+                    <StatusBadge status={vehicule.statut} className="text-[10px]" />
                     {vehicule.categorie && (
                       <Badge variant="secondary" className="text-[10px] bg-muted text-muted-foreground border-none">
                         {vehicule.categorie}
@@ -259,7 +250,6 @@ export default function Vehicles() {
             </thead>
             <tbody className="divide-y divide-border">
               {filteredVehicules.map((vehicule) => {
-                const status = statutConfig[vehicule.statut] || statutConfig['Libre'];
                 return (
                   <tr key={vehicule.vehicule_id} className="hover:bg-accent/50 transition-colors">
                     <td className="px-4 py-3">
@@ -270,9 +260,7 @@ export default function Vehicles() {
                     <td className="px-4 py-3 text-foreground">{vehicule.kilometrage_actuel.toLocaleString()} km</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline" className={cn('text-[10px] uppercase font-bold tracking-wider', status.className)}>
-                          {status.label}
-                        </Badge>
+                        <StatusBadge status={vehicule.statut} className="text-[10px]" />
                         {vehicule.categorie && (
                           <Badge variant="secondary" className="text-[10px] bg-muted text-muted-foreground border-none">
                             {vehicule.categorie}
