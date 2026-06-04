@@ -37,7 +37,9 @@ import { useVehicules } from '@/hooks/useVehicules';
 import { useAvailableChauffeursInRange } from '@/hooks/useAvailableChauffeurs';
 import { useAvailableVehiculesInRange } from '@/hooks/useAvailableVehicules';
 import { useTarifs } from '@/hooks/useTarifs';
+import { ClientFormDialog } from '@/components/clients/ClientFormDialog';
 import { useToast } from '@/hooks/use-toast';
+import { getIconForMethod } from '@/lib/paymentUtils';
 import { Info, AlertCircle, CreditCard, Banknote, Landmark, Calendar, Clock, Plus } from 'lucide-react';
 import {
   AlertDialog,
@@ -402,12 +404,6 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
     }
   };
 
-  const getIconForMethod = (label: string) => {
-    const l = label.toLowerCase();
-    if (l.includes('cash') || l.includes('espèce')) return <Banknote className="h-4 w-4" />;
-    if (l.includes('virement') || l.includes('bank')) return <Landmark className="h-4 w-4" />;
-    return <CreditCard className="h-4 w-4" />; // M-Pesa etc
-  };
 
   // Vérifier si le formulaire est valide pour l'envoi
   const isFormValid = formData.chauffeur_id > 0 && formData.vehicule_id > 0;
@@ -831,6 +827,20 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
             </AlertDialogFooter>
           </AlertDialogContent>
           </AlertDialog>
+
+          {/* Dialogue pour créer un nouveau client */}
+          <ClientFormDialog 
+            open={clientFormOpen} 
+            onOpenChange={setClientFormOpen}
+            onClientCreated={(newClient) => {
+              setFormData(prev => ({
+                ...prev,
+                client_id: newClient.client_id,
+                client_nom: `${newClient.nom} ${newClient.prenom || ''}`.trim(),
+                lieu_depart: newClient.adresse || prev.lieu_depart
+              }));
+            }}
+          />
           </DialogContent>
           </Dialog >
           );

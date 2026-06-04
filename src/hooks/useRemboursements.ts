@@ -149,6 +149,53 @@ export function useRemboursements() {
       .reduce((sum, r) => sum + Number(r.montant), 0),
   };
 
+  const validateRemboursement = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Remboursement }) => {
+      // 1. Mettre à jour le statut
+      const { data: updated, error: updateError } = await supabase
+        .from('tb_remboursements')
+        .update({ statut: 'Remboursé', date_traitement: new Date().toISOString() })
+        .eq('remboursement_id', id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      // 2. Créer une transaction de sortie
+      const { error: transactionError } = await supabase
+        .from('tb_caisse')
+        .insert([{
+          type: 'Sortie',
+          montant: data.montant,
+          devise: data.devise || 'USD',
+          description: `Remboursement client: ${data.client_nom} (Motif: ${data.motif})`,
+          source_type: 'Remboursement',
+          source_id: id,
+          date_transaction: new Date().toISOString(),
+          methode_paiement: 'Cash' // Par défaut
+        }]);
+
+      if (transactionError) throw transactionError;
+
+      return updated;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['remboursements'] });
+      queryClient.invalidateQueries({ queryKey: ['caisse'] });
+      toast({
+        title: 'Succès',
+        description: 'Remboursement validé et comptabilisé',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erreur',
+        description: `Erreur lors de la validation: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     remboursements,
     isLoading,
@@ -157,5 +204,6 @@ export function useRemboursements() {
     createRemboursement,
     updateRemboursement,
     deleteRemboursement,
+    validateRemboursement,
   };
 }

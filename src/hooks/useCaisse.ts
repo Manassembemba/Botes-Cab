@@ -20,7 +20,7 @@ export function useCaisse() {
             // 1. Récupérer les transactions
             const { data: transactions, error } = await supabase
                 .from('tb_caisse')
-                .select('*')
+                .select('*, methode_paiement')
                 .order('date_transaction', { ascending: false });
 
             if (error) throw error;
@@ -39,15 +39,17 @@ export function useCaisse() {
             let missionIdsToCheck = new Set<number>(directMissionIds as number[]);
             const paiementIdToMissionId = new Map<number, number>();
 
-            // 4. Si on a des paiements, récupérer leur mission_id
+            // 4. Si on a des paiements, récupérer leur mission_id ET methode_paiement
+            const paiementsMap = new Map<number, any>();
             if (paiementIds.length > 0) {
                 const { data: paiements, error: paiementsError } = await supabase
                     .from('tb_paiements')
-                    .select('paiement_id, mission_id')
+                    .select('paiement_id, mission_id, methode_paiement')
                     .in('paiement_id', paiementIds);
 
                 if (!paiementsError && paiements) {
                     paiements.forEach(p => {
+                        paiementsMap.set(p.paiement_id, p);
                         if (p.mission_id) {
                             paiementIdToMissionId.set(p.paiement_id, p.mission_id);
                             missionIdsToCheck.add(p.mission_id);
@@ -121,6 +123,9 @@ export function useCaisse() {
                 // Cas 2: Lié à un paiement
                 else if ((t.source_type === 'Paiement' || t.source_type === 'paiement') && t.source_id) {
                     missionId = paiementIdToMissionId.get(t.source_id);
+                    if (!t.methode_paiement) {
+                        t.methode_paiement = paiementsMap.get(t.source_id)?.methode_paiement;
+                    }
                 }
 
                 if (missionId) {

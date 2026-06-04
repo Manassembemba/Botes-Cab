@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Trash2, DollarSign, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, DollarSign, Clock, CheckCircle, XCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRemboursements, Remboursement, RemboursementFormData } from '@/hooks/useRemboursements';
@@ -19,7 +19,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 export default function Remboursements() {
-  const { remboursements, isLoading, stats, createRemboursement, updateRemboursement, deleteRemboursement } = useRemboursements();
+  const { remboursements, isLoading, stats, createRemboursement, updateRemboursement, deleteRemboursement, validateRemboursement } = useRemboursements();
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRemboursement, setSelectedRemboursement] = useState<Remboursement | null>(null);
@@ -185,6 +185,17 @@ export default function Remboursements() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
+                        {remboursement.statut === 'Approuvé' && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-status-available hover:text-status-available/80"
+                            onClick={() => validateRemboursement.mutate({ id: remboursement.remboursement_id, data: remboursement })}
+                            disabled={validateRemboursement.isPending}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(remboursement)}>
                           <Edit className="h-4 w-4" />
                         </Button>

@@ -79,9 +79,10 @@ export default function Accounting() {
     const fluxPeriode = useMemo(() => {
         return filteredTransactions.reduce((acc, t) => {
             const montant = Number(t.montant);
-            // Normalisation devise : USD ou CDF/FC
             const isCDF = t.devise === 'CDF' || t.devise === 'FC';
+            const methode = t.methode_paiement?.toLowerCase() || '';
 
+            // Flux globaux
             if (!isCDF) { // USD
                 if (t.type === 'Entrée') acc.entreesUSD += montant;
                 else acc.sortiesUSD += montant;
@@ -89,8 +90,23 @@ export default function Accounting() {
                 if (t.type === 'Entrée') acc.entreesCDF += montant;
                 else acc.sortiesCDF += montant;
             }
+
+            // Totaux par méthode (Entrées uniquement)
+            if (t.type === 'Entrée') {
+                if (methode.includes('cash') || methode.includes('espèce')) {
+                    if (!isCDF) acc.cashUSD += montant;
+                    else acc.cashCDF += montant;
+                } else if (methode.includes('mobile') || methode.includes('airtel') || methode.includes('mpesa') || methode.includes('orange')) {
+                    if (!isCDF) acc.momoUSD += montant;
+                    else acc.momoCDF += montant;
+                }
+            }
+
             return acc;
-        }, { entreesUSD: 0, sortiesUSD: 0, entreesCDF: 0, sortiesCDF: 0 });
+        }, { 
+            entreesUSD: 0, sortiesUSD: 0, entreesCDF: 0, sortiesCDF: 0,
+            cashUSD: 0, cashCDF: 0, momoUSD: 0, momoCDF: 0 
+        });
     }, [filteredTransactions]);
 
     const soldePeriodeUSD = fluxPeriode.entreesUSD - fluxPeriode.sortiesUSD;
@@ -298,6 +314,16 @@ export default function Accounting() {
                             +{fluxPeriode.entreesCDF.toLocaleString()} FC
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-2 italic">Toutes les recettes sur la période</p>
+                        <div className="mt-4 pt-4 border-t border-status-available/20 text-xs">
+                            <div className="flex justify-between py-1">
+                                <span className="text-muted-foreground">Cash:</span>
+                                <span className="font-semibold">${fluxPeriode.cashUSD.toLocaleString()} / {fluxPeriode.cashCDF.toLocaleString()} FC</span>
+                            </div>
+                            <div className="flex justify-between py-1">
+                                <span className="text-muted-foreground">Mobile Money:</span>
+                                <span className="font-semibold">${fluxPeriode.momoUSD.toLocaleString()} / {fluxPeriode.momoCDF.toLocaleString()} FC</span>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -354,6 +380,7 @@ export default function Accounting() {
                                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
                                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Véhicule</th>
                                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Description</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Moyen de paiement</th>
                                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Source</th>
                                 <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Montant</th>
                             </tr>
@@ -390,6 +417,9 @@ export default function Accounting() {
                                     </td>
                                     <td className="px-4 py-3 text-sm text-foreground max-w-xs truncate">
                                         {t.description}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-foreground">
+                                        {t.methode_paiement || '-'}
                                     </td>
                                     <td className="px-4 py-3">
                                         <div className="flex flex-col gap-1">

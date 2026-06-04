@@ -123,7 +123,18 @@ export function RemboursementFormDialog({
             <Label htmlFor="mission_id">Mission associée (optionnel)</Label>
             <Select
               value={formData.mission_id?.toString() || 'none'}
-              onValueChange={(value) => setFormData({ ...formData, mission_id: value === 'none' ? null : parseInt(value) })}
+              onValueChange={(value) => {
+              const missionId = value === 'none' ? null : parseInt(value);
+              const selectedMission = missions.find(m => m.mission_id === missionId);
+              console.log("Mission sélectionnée:", selectedMission); // Debug
+
+              setFormData(prev => ({
+                ...prev,
+                mission_id: missionId,
+                client_nom: selectedMission?.client_nom || prev.client_nom,
+                montant: selectedMission?.montant_total || prev.montant
+              }));
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Sélectionner une mission" />
