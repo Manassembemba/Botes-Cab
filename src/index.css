@@ -2,102 +2,91 @@
 @tailwind components;
 @tailwind utilities;
 
-@import "@fontsource/plus-jakarta-sans/400.css";
-@import "@fontsource/plus-jakarta-sans/500.css";
-@import "@fontsource/plus-jakarta-sans/600.css";
-@import "@fontsource/plus-jakarta-sans/700.css";
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
 
-/* Botes CAB Fleet Management - Design System */
+/* Botes CAB Fleet Management - UI/UX Pro Max Design System */
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 20% 10%;
+    /* Fond principal : Blanc cassé pour lisibilité */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
 
+    /* Cartes blanches */
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 0 0% 10%;
 
-    --primary: 220 70% 50%;
-    --primary-foreground: 0 0% 100%;
+    /* Couleur primaire : Jaune Botes (#FFDE00) */
+    --primary: 52 100% 50%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 220 15% 92%;
-    --secondary-foreground: 220 20% 20%;
+    /* Secondaire : Noir / Gris très sombre */
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 15% 95%;
-    --muted-foreground: 220 10% 45%;
+    /* CTA / Accent : Noir */
+    --cta: 0 0% 0%;
+    --cta-foreground: 0 0% 100%;
 
-    --accent: 220 15% 92%;
-    --accent-foreground: 220 20% 20%;
+    /* Muted */
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 40%;
 
-    --destructive: 0 72% 51%;
+    /* Accent hover */
+    --accent: 52 100% 90%;
+    --accent-foreground: 0 0% 10%;
+
+    /* Destructive rouge */
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 220 70% 50%;
+    /* Bordures */
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 52 100% 50%;
 
     --radius: 0.75rem;
 
     /* Status Colors */
     --status-available: 142 71% 45%;
-    --status-assigned: 217 91% 60%;
+    --status-assigned: 52 100% 45%; /* Yellow based */
     --status-maintenance: 38 92% 50%;
     --status-offline: 0 72% 51%;
     --status-cleaning: 280 65% 55%;
 
-    /* Sidebar */
-    --sidebar-background: 220 25% 12%;
-    --sidebar-foreground: 220 15% 75%;
-    --sidebar-primary: 220 70% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 25% 18%;
+    /* Sidebar : Noir avec accents jaunes */
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 70%;
+    --sidebar-primary: 52 100% 50%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 15%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 20% 20%;
-    --sidebar-ring: 220 70% 55%;
+    --sidebar-border: 0 0% 12%;
+    --sidebar-ring: 52 100% 50%;
   }
 
   .dark {
-    --background: 220 25% 8%;
-    --foreground: 220 15% 95%;
+    --background: 0 0% 5%;
+    --foreground: 0 0% 95%;
 
-    --card: 220 25% 12%;
-    --card-foreground: 220 15% 95%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 220 25% 12%;
-    --popover-foreground: 220 15% 95%;
+    --primary: 52 100% 50%;
+    --primary-foreground: 0 0% 0%;
 
-    --primary: 220 70% 55%;
-    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 95%;
 
-    --secondary: 220 20% 18%;
-    --secondary-foreground: 220 15% 85%;
-
-    --muted: 220 20% 15%;
-    --muted-foreground: 220 10% 55%;
-
-    --accent: 220 20% 18%;
-    --accent-foreground: 220 15% 95%;
-
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 20% 18%;
-    --input: 220 20% 18%;
-    --ring: 220 70% 55%;
-
-    --sidebar-background: 220 25% 6%;
-    --sidebar-foreground: 220 15% 75%;
-    --sidebar-primary: 220 70% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 25% 12%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 20% 15%;
-    --sidebar-ring: 220 70% 55%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 52 100% 50%;
   }
 }
+
 
 @layer base {
   * {
@@ -111,7 +100,11 @@
 
 @layer utilities {
   .glass {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.05)];
+  }
+
+  .glass-dark {
+    @apply bg-black/60 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
   }
   
   .status-available {
@@ -120,6 +113,7 @@
   
   .status-assigned {
     @apply bg-[hsl(var(--status-assigned))];
+    box-shadow: 0 0 15px rgba(255, 222, 0, 0.3);
   }
   
   .status-maintenance {
@@ -132,5 +126,15 @@
   
   .status-cleaning {
     @apply bg-[hsl(var(--status-cleaning))];
+  }
+
+  .monitoring-glow {
+    box-shadow: 0 0 20px rgba(255, 222, 0, 0.15);
+    animation: monitoring-pulse 2s infinite ease-in-out;
+  }
+
+  @keyframes monitoring-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(0.99); }
   }
 }
