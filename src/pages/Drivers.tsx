@@ -4,7 +4,8 @@ import { ChauffeurFormDialog } from '@/components/chauffeurs/ChauffeurFormDialog
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, LayoutGrid, List, Phone, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, Phone, Pencil, Trash2, Calendar } from 'lucide-react';
+import { useMonthlyStats } from '@/hooks/useMonthlyStats';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -38,6 +39,12 @@ export default function Drivers() {
   const { data: chauffeurs, isLoading, error } = useChauffeurs();
   const deleteMutation = useDeleteChauffeur();
   const { toast } = useToast();
+  const { data: stats } = useMonthlyStats();
+
+  const getDriverMonthlyMissions = (chauffeurId: number) => {
+    if (!stats || !stats.drivers[chauffeurId]) return 0;
+    return stats.drivers[chauffeurId].totalMissions;
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -211,6 +218,17 @@ export default function Drivers() {
                   </Badge>
                 </div>
 
+                {/* Track Record Mensuel */}
+                <div className="mb-4 rounded-lg bg-indigo-500/5 border border-indigo-500/10 px-3 py-2 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5 text-indigo-500" />
+                    <span>Courses ce mois</span>
+                  </div>
+                  <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                    {getDriverMonthlyMissions(chauffeur.chauffeur_id)}
+                  </span>
+                </div>
+
                 {expiringSoon && (
                   <div className="mb-4 rounded-lg bg-status-maintenance/10 border border-status-maintenance/20 px-3 py-2">
                     <p className="text-xs font-medium text-status-maintenance">
@@ -248,6 +266,7 @@ export default function Drivers() {
                 <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Chauffeur</th>
                 <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Contact</th>
                 <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Permis</th>
+                <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Courses (Mois)</th>
                 <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Statut</th>
                 <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Actions</th>
               </tr>
@@ -285,6 +304,9 @@ export default function Drivers() {
                       <Badge variant="outline" className={cn('text-xs', status.className)}>
                         {status.label}
                       </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                      {getDriverMonthlyMissions(chauffeur.chauffeur_id)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">

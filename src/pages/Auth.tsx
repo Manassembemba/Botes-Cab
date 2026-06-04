@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Truck, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import { Logo } from '@/components/ui/Logo';
 
 const emailSchema = z.string().email('Email invalide');
 const passwordSchema = z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères');
@@ -30,14 +31,14 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md glass border-primary/10">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-primary rounded-xl flex items-center justify-center">
-            <Truck className="h-8 w-8 text-primary-foreground" />
+          <div className="flex justify-center">
+            <Logo size="xl" showText={false} />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold">Botes CAB</CardTitle>
-            <CardDescription>Gestion de flotte de transport</CardDescription>
+            <CardTitle className="text-3xl font-black text-primary font-mono uppercase tracking-tighter">Botes <span className="text-cta">Cab</span></CardTitle>
+            <CardDescription className="uppercase tracking-[0.2em] text-[10px] font-bold">Système de gestion de flotte</CardDescription>
           </div>
         </CardHeader>
         <CardContent>

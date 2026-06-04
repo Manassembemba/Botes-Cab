@@ -19,13 +19,15 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/ui/Logo';
 
 const navigationGroups = [
   {
     title: 'Opérations',
     items: [
       { name: 'Tableau de Bord', href: '/', icon: LayoutDashboard },
-      { name: 'Missions', href: '/missions', icon: CalendarClock },
+      { name: 'Réservations', href: '/reservations', icon: CalendarClock },
+      { name: 'Missions', href: '/missions', icon: Truck },
       { name: 'Chauffeurs', href: '/drivers', icon: Users },
       { name: 'Véhicules', href: '/vehicles', icon: Car },
     ]
@@ -108,14 +110,8 @@ export function AppSidebar() {
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary shadow-lg shadow-sidebar-primary/20">
-              <Truck className="h-5 w-5 text-sidebar-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-sidebar-primary-foreground tracking-tight">Botes CAB</h1>
-              <p className="text-[10px] uppercase tracking-widest font-semibold text-sidebar-foreground/50">Fleet Control</p>
-            </div>
+          <div className="flex h-20 items-center px-6 border-b border-sidebar-border bg-background/50 backdrop-blur-sm">
+            <Logo />
           </div>
 
           {/* Navigation */}

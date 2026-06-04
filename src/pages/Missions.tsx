@@ -1,4 +1,5 @@
 import { useMissions, useDeleteMission, useUpdateMission, type MissionWithDetails, type Mission } from '@/hooks/useMissions';
+import { useReservations, type ReservationWithDetails } from '@/hooks/useReservations';
 import { useChauffeurs } from '@/hooks/useChauffeurs';
 import { useVehicules } from '@/hooks/useVehicules';
 import { MissionFormDialog } from '@/components/missions/MissionFormDialog';
@@ -44,6 +45,7 @@ import { useState } from 'react';
 
 const statusFilters = [
   { label: 'Toutes', value: 'all' },
+  { label: 'Réservées', value: 'Réservée' },
   { label: 'Planifiées', value: 'Planifiée' },
   { label: 'En cours', value: 'En cours' },
   { label: 'Terminées', value: 'Terminée' },
@@ -51,10 +53,27 @@ const statusFilters = [
 ];
 
 export default function Missions() {
-  const { data: missions, isLoading, error } = useMissions();
+  const { data: missions, isLoading: loadingMissions, error: errorMissions } = useMissions();
+  const { data: reservations, isLoading: loadingReservations } = useReservations();
   const deleteMutation = useDeleteMission();
   const updateMutation = useUpdateMission();
   const { toast } = useToast();
+
+  // Normalisation des réservations en "quasi-missions" pour l'affichage unifié
+  // On ne garde que les réservations avec chauffeur affecté selon la demande
+  const normalizedReservations = (reservations || [])
+    .filter(r => r.chauffeur_id && r.statut_reservation !== 'convertie_en_mission')
+    .map(r => ({
+      ...r,
+      mission_id: `res-${r.reservation_id}`, // Préfixe pour éviter les conflits d'ID
+      statut_mission: 'Réservée',
+      isReservation: true,
+      // Adapter la structure pour correspondre à MissionWithDetails
+      chauffeur: r.chauffeur ? { ...r.chauffeur, chauffeur_id: r.chauffeur_id } : null,
+      vehicule: r.vehicule ? { ...r.vehicule, vehicule_id: r.vehicule_id } : null,
+    })) as unknown as any[];
+
+  const allOperativeTasks = [...(missions || []), ...normalizedReservations];
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -66,15 +85,15 @@ export default function Missions() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingMission, setEditingMission] = useState<Mission | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [missionToDelete, setMissionToDelete] = useState<MissionWithDetails | null>(null);
+  const [missionToDelete, setMissionToDelete] = useState<any | null>(null);
 
   // States pour le paiement
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [missionToPay, setMissionToPay] = useState<MissionWithDetails | null>(null);
+  const [missionToPay, setMissionToPay] = useState<any | null>(null);
 
   // States pour la clôture
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
-  const [missionToComplete, setMissionToComplete] = useState<MissionWithDetails | null>(null);
+  const [missionToComplete, setMissionToComplete] = useState<any | null>(null);
 
   // States pour le dialogue client
   const [clientFormOpen, setClientFormOpen] = useState(false);
@@ -82,30 +101,30 @@ export default function Missions() {
   const { data: chauffeurs } = useChauffeurs();
   const { data: vehicules } = useVehicules();
 
-  const filteredMissions = missions?.filter((mission) => {
+  const filteredMissions = allOperativeTasks.filter((task) => {
     // 1. Filtre Recherche (Priorité absolue)
     if (searchQuery) {
       const matchesSearch =
-        mission.lieu_depart.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        mission.lieu_arrivee.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (mission.client_nom?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-      const matchesStatus = statusFilter === 'all' || mission.statut_mission === statusFilter;
+        task.lieu_depart.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.lieu_arrivee.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (task.client_nom?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+      const matchesStatus = statusFilter === 'all' || task.statut_mission === statusFilter;
       return matchesSearch && matchesStatus;
     }
 
     // 2. Filtres Dropdown
-    const matchesStatusFilter = statusFilter === 'all' || mission.statut_mission === statusFilter;
+    const matchesStatusFilter = statusFilter === 'all' || task.statut_mission === statusFilter;
     if (!matchesStatusFilter) return false;
 
-    const matchesChauffeurFilter = chauffeurFilter === 'all' || mission.chauffeur_id?.toString() === chauffeurFilter;
+    const matchesChauffeurFilter = chauffeurFilter === 'all' || task.chauffeur_id?.toString() === chauffeurFilter;
     if (!matchesChauffeurFilter) return false;
 
-    const matchesVehiculeFilter = vehiculeFilter === 'all' || mission.vehicule_id?.toString() === vehiculeFilter;
+    const matchesVehiculeFilter = vehiculeFilter === 'all' || task.vehicule_id?.toString() === vehiculeFilter;
     if (!matchesVehiculeFilter) return false;
 
     // 3. Logique de Date & Visibilité "Intelligente"
-    // Si la mission est 'En cours' ou 'Planifiée', on l'affiche TOUJOURS en vue Liste par défaut
-    const isActiveMission = ['En cours', 'Planifiée'].includes(mission.statut_mission);
+    // Si la mission est 'En cours' ou 'Planifiée' ou 'Réservée', on l'affiche TOUJOURS en vue Liste par défaut
+    const isActiveMission = ['En cours', 'Planifiée', 'Réservée'].includes(task.statut_mission);
 
     if (showAllDates) return true;
 
@@ -114,7 +133,7 @@ export default function Missions() {
     }
 
     // Pour les autres (Terminée/Annulée), on filtre par date sélectionnée
-    const missionDate = new Date(mission.date_depart_prevue);
+    const missionDate = new Date(task.date_depart_prevue);
     const dayStart = startOfDay(selectedDate);
     const dayEnd = endOfDay(selectedDate);
 
@@ -194,7 +213,7 @@ export default function Missions() {
     }
   };
 
-  if (isLoading) {
+  if (loadingMissions || loadingReservations) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -202,7 +221,7 @@ export default function Missions() {
     );
   }
 
-  if (error) {
+  if (errorMissions) {
     return (
       <div className="text-center py-12">
         <p className="text-destructive">Erreur lors du chargement des missions</p>
@@ -215,8 +234,8 @@ export default function Missions() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Planification des Missions</h1>
-          <p className="text-muted-foreground mt-1">{missions?.length || 0} missions programmées</p>
+          <h1 className="text-2xl font-bold text-foreground">Planification Opérationnelle</h1>
+          <p className="text-muted-foreground mt-1">{allOperativeTasks.length} missions & réservations actives</p>
         </div>
         <Button className="gap-2" onClick={() => setFormOpen(true)}>
           <Plus className="h-4 w-4" />
@@ -487,7 +506,7 @@ export default function Missions() {
                   {/* Assignment */}
                   <div className="flex items-center gap-4 lg:w-auto">
                     {/* Actions de Statut */}
-                    {mission.statut_mission === 'Planifiée' && (
+                    {mission.statut_mission === 'Planifiée' && !mission.isReservation && (
                       <Button
                         size="sm"
                         variant="default"
@@ -499,7 +518,7 @@ export default function Missions() {
                       </Button>
                     )}
 
-                    {mission.statut_mission === 'En cours' && (
+                    {mission.statut_mission === 'En cours' && !mission.isReservation && (
                       <Button
                         size="sm"
                         variant="default"
@@ -514,8 +533,15 @@ export default function Missions() {
                       </Button>
                     )}
 
+                    {mission.isReservation && (
+                      <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 gap-1 py-1">
+                        <CalendarClock className="h-3 w-3" />
+                        Réservation (Active)
+                      </Badge>
+                    )}
+
                     {/* Bouton Payer Solde */}
-                    {(mission.solde || 0) > 0 && (
+                    {(mission.solde || 0) > 0 && !mission.isReservation && (
                       <Button
                         size="sm"
                         className="bg-destructive hover:bg-destructive/90 text-white gap-1 animate-pulse"
@@ -548,31 +574,38 @@ export default function Missions() {
                     )}
 
                     <div className="flex gap-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={() => handleDuplicate(mission)}>
-                              <Copy className="h-4 w-4 text-blue-500" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Dupliquer cette mission</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      {!mission.isReservation && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm" onClick={() => handleDuplicate(mission)}>
+                                <Copy className="h-4 w-4 text-blue-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Dupliquer cette mission</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
 
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(mission)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => {
-                          setMissionToDelete(mission);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {!mission.isReservation && (
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(mission)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      
+                      {!mission.isReservation && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setMissionToDelete(mission);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

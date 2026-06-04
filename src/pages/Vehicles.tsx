@@ -4,7 +4,8 @@ import { VehiculeFormDialog } from '@/components/vehicules/VehiculeFormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, LayoutGrid, List, Pencil, Trash2, Car, Gauge } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, Pencil, Trash2, Car, Gauge, TrendingUp } from 'lucide-react';
+import { useMonthlyStats } from '@/hooks/useMonthlyStats';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +32,19 @@ export default function Vehicles() {
   const { data: vehicules, isLoading, error } = useVehicules();
   const deleteMutation = useDeleteVehicule();
   const { toast } = useToast();
+  const { data: stats } = useMonthlyStats();
+
+  const getVehicleMonthlyStats = (vehicleId: number) => {
+    if (!stats || !stats.vehicles[vehicleId]) return { text: '0 USD', count: 0 };
+    const { usd, cdf, count } = stats.vehicles[vehicleId];
+    const parts = [];
+    if (usd > 0) parts.push(`${usd.toLocaleString()} USD`);
+    if (cdf > 0) parts.push(`${cdf.toLocaleString()} CDF`);
+    return {
+      text: parts.length > 0 ? parts.join(' + ') : '0 USD',
+      count,
+    };
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -207,6 +221,17 @@ export default function Vehicles() {
                   </div>
                 </div>
 
+                {/* Track Record Mensuel */}
+                <div className="mb-4 rounded-lg bg-emerald-500/5 border border-emerald-500/10 px-3 py-2 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                    <span>Revenu ce mois</span>
+                  </div>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {getVehicleMonthlyStats(vehicule.vehicule_id).text}
+                  </span>
+                </div>
+
                 {needsRevision && vehicule.date_prochaine_revision && (
                   <div className="mb-4 rounded-lg bg-status-maintenance/10 border border-status-maintenance/20 px-3 py-2">
                     <p className="text-xs font-medium text-status-maintenance">
@@ -244,6 +269,7 @@ export default function Vehicles() {
                 <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Véhicule</th>
                 <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Immatriculation</th>
                 <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Kilométrage</th>
+                <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Revenu (Mois)</th>
                 <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Statut</th>
                 <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Actions</th>
               </tr>
@@ -258,6 +284,9 @@ export default function Vehicles() {
                     </td>
                     <td className="px-4 py-3 text-foreground">{vehicule.immatriculation}</td>
                     <td className="px-4 py-3 text-foreground">{vehicule.kilometrage_actuel.toLocaleString()} km</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                      {getVehicleMonthlyStats(vehicule.vehicule_id).text}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
                         <StatusBadge status={vehicule.statut} className="text-[10px]" />

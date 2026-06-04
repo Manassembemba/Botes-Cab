@@ -40,6 +40,7 @@ const statusConfigs: Record<string, StatusConfig> = {
   'Terminée': { label: 'Terminée', colorClass: 'bg-status-available/10 text-status-available border-status-available/20', dotClass: 'bg-status-available' },
   'cancelled': { label: 'Annulée', colorClass: 'bg-status-offline/10 text-status-offline border-status-offline/20', dotClass: 'bg-status-offline' },
   'Annulée': { label: 'Annulée', colorClass: 'bg-status-offline/10 text-status-offline border-status-offline/20', dotClass: 'bg-status-offline' },
+  'Réservée': { label: 'Réservée', colorClass: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20', dotClass: 'bg-indigo-500' },
 
   // Finance
   'pending': { label: 'En attente', colorClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20', dotClass: 'bg-amber-500' },

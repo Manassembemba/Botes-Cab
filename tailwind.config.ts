@@ -14,7 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Plus Jakarta Sans", "system-ui", "sans-serif"],
+        sans: ["Fira Sans", "Plus Jakarta Sans", "system-ui", "sans-serif"],
+        mono: ["Fira Code", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -29,6 +30,10 @@ export default {
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
+        },
+        cta: {
+          DEFAULT: "hsl(var(--cta))",
+          foreground: "hsl(var(--cta-foreground))",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",

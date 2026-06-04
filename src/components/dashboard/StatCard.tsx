@@ -11,6 +11,7 @@ interface StatCardProps {
     positive: boolean;
   };
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
+  className?: string;
 }
 
 const variantStyles = {
@@ -29,11 +30,12 @@ const iconVariantStyles = {
   danger: 'bg-destructive/20 text-destructive',
 };
 
-export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 'default' }: StatCardProps) {
+export function StatCard({ title, value, subtitle, icon: Icon, trend, variant = 'default', className }: StatCardProps) {
   return (
     <div className={cn(
       'rounded-xl border p-5 transition-all duration-200 hover:shadow-lg animate-fade-in',
-      variantStyles[variant]
+      variantStyles[variant],
+      className
     )}>
       <div className="flex items-start justify-between">
         <div className="space-y-1">

@@ -3,10 +3,11 @@ import { AppSidebar } from './AppSidebar';
 import { Bell, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { PwaInstallBanner } from './PwaInstallBanner';
 
 export function AppLayout() {
   return (
-    <div className="min-h-screen bg-background dark">
+    <div className="min-h-screen bg-background">
       <AppSidebar />
 
       <div className="lg:pl-64">
@@ -40,6 +41,9 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      <PwaInstallBanner />
     </div>
   );
 }
+

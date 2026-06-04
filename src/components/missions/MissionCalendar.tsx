@@ -25,6 +25,7 @@ const statusColors: Record<string, string> = {
     'En cours': 'bg-status-available/20 text-status-available border-status-available/30 hover:bg-status-available/30',
     'Terminée': 'bg-muted text-muted-foreground border-border hover:bg-muted/80',
     'Annulée': 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20',
+    'Réservée': 'bg-indigo-500/20 text-indigo-600 border-indigo-500/30 hover:bg-indigo-500/40',
     'Maintenance': 'bg-orange-500/20 text-orange-600 border-orange-500/30 hover:bg-orange-500/30 pattern-diagonal-lines',
 };
 
