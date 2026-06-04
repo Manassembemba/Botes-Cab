@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useVehicules, useDeleteVehicule, type Vehicule } from '@/hooks/useVehicules';
+import { useDepensesVehiculesMensuel } from '@/hooks/useFinancialReports';
 import { VehiculeFormDialog } from '@/components/vehicules/VehiculeFormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,18 +31,26 @@ const statusFilters = [
 
 export default function Vehicles() {
   const { data: vehicules, isLoading, error } = useVehicules();
+  const { data: depensesMensuelles } = useDepensesVehiculesMensuel();
   const deleteMutation = useDeleteVehicule();
   const { toast } = useToast();
   const { data: stats } = useMonthlyStats();
 
   const getVehicleMonthlyStats = (vehicleId: number) => {
-    if (!stats || !stats.vehicles[vehicleId]) return { text: '0 USD', count: 0 };
+    if (!stats || !stats.vehicles[vehicleId]) return { text: '0 USD', depenses: '0 USD', count: 0 };
     const { usd, cdf, count } = stats.vehicles[vehicleId];
+    
+    // Ajout des dépenses
+    const depenses = depensesMensuelles?.filter(d => d.vehicule_id === vehicleId) || [];
+    const totalDepenses = depenses.reduce((sum, d) => sum + (d.montant_total || 0), 0);
+
     const parts = [];
     if (usd > 0) parts.push(`${usd.toLocaleString()} USD`);
     if (cdf > 0) parts.push(`${cdf.toLocaleString()} CDF`);
+    
     return {
       text: parts.length > 0 ? parts.join(' + ') : '0 USD',
+      depenses: totalDepenses.toLocaleString() + ' USD',
       count,
     };
   };
@@ -222,14 +231,25 @@ export default function Vehicles() {
                 </div>
 
                 {/* Track Record Mensuel */}
-                <div className="mb-4 rounded-lg bg-emerald-500/5 border border-emerald-500/10 px-3 py-2 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                    <span>Revenu ce mois</span>
+                <div className="mb-4 rounded-lg bg-emerald-500/5 border border-emerald-500/10 px-3 py-2 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                      <span>Revenu</span>
+                    </div>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {getVehicleMonthlyStats(vehicule.vehicule_id).text}
+                    </span>
                   </div>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                    {getVehicleMonthlyStats(vehicule.vehicule_id).text}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Wrench className="h-3.5 w-3.5 text-destructive" />
+                      <span>Dépenses</span>
+                    </div>
+                    <span className="font-bold text-destructive">
+                      {getVehicleMonthlyStats(vehicule.vehicule_id).depenses}
+                    </span>
+                  </div>
                 </div>
 
                 {needsRevision && vehicule.date_prochaine_revision && (
@@ -286,6 +306,9 @@ export default function Vehicles() {
                     <td className="px-4 py-3 text-foreground">{vehicule.kilometrage_actuel.toLocaleString()} km</td>
                     <td className="px-4 py-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                       {getVehicleMonthlyStats(vehicule.vehicule_id).text}
+                      <span className="block text-xs font-bold text-destructive">
+                        Dépenses: {getVehicleMonthlyStats(vehicule.vehicule_id).depenses}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">

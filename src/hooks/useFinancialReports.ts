@@ -105,17 +105,17 @@ export function useRentabiliteVehicules() {
     });
 }
 
-// Hook : Rentabilité par chauffeur
-export function useRentabiliteChauffeurs() {
+// Hook : Dépenses par véhicule et par mois
+export function useDepensesVehiculesMensuel() {
     return useQuery({
-        queryKey: ['rentabilite', 'chauffeurs'],
+        queryKey: ['depenses', 'vehicules', 'mensuel'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('vue_rentabilite_chauffeurs')
+                .from('vue_depenses_vehicules_mensuel')
                 .select('*');
 
             if (error) throw error;
-            return data as RentabiliteChauffeur[];
+            return data;
         },
     });
 }
