@@ -8,56 +8,33 @@
 
 @layer base {
   :root {
-    /* Fond principal : Blanc cassé pour lisibilité */
     --background: 0 0% 98%;
     --foreground: 0 0% 10%;
-
-    /* Cartes blanches */
     --card: 0 0% 100%;
     --card-foreground: 0 0% 10%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
-
-    /* Couleur primaire : Jaune Botes (#FFDE00) */
     --primary: 52 100% 50%;
     --primary-foreground: 0 0% 0%;
-
-    /* Secondaire : Noir / Gris très sombre */
     --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 100%;
-
-    /* CTA / Accent : Noir */
     --cta: 0 0% 0%;
     --cta-foreground: 0 0% 100%;
-
-    /* Muted */
     --muted: 0 0% 92%;
     --muted-foreground: 0 0% 40%;
-
-    /* Accent hover */
     --accent: 52 100% 90%;
     --accent-foreground: 0 0% 10%;
-
-    /* Destructive rouge */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
-    /* Bordures */
     --border: 0 0% 85%;
     --input: 0 0% 85%;
     --ring: 52 100% 50%;
-
     --radius: 0.75rem;
-
-    /* Status Colors */
     --status-available: 142 71% 45%;
-    --status-assigned: 52 100% 45%; /* Yellow based */
+    --status-assigned: 52 100% 45%;
     --status-maintenance: 38 92% 50%;
     --status-offline: 0 72% 51%;
     --status-cleaning: 280 65% 55%;
-
-    /* Sidebar : Noir avec accents jaunes */
     --sidebar-background: 0 0% 7%;
     --sidebar-foreground: 0 0% 70%;
     --sidebar-primary: 52 100% 50%;
@@ -71,28 +48,22 @@
   .dark {
     --background: 0 0% 5%;
     --foreground: 0 0% 95%;
-
     --card: 0 0% 8%;
     --card-foreground: 0 0% 95%;
-
     --primary: 52 100% 50%;
     --primary-foreground: 0 0% 0%;
-
     --secondary: 0 0% 20%;
     --secondary-foreground: 0 0% 95%;
-
     --border: 0 0% 15%;
     --input: 0 0% 15%;
     --ring: 52 100% 50%;
   }
 }
 
-
 @layer base {
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
@@ -102,37 +73,18 @@
   .glass {
     @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.05)];
   }
-
   .glass-dark {
     @apply bg-black/60 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
   }
-  
-  .status-available {
-    @apply bg-[hsl(var(--status-available))];
-  }
-  
-  .status-assigned {
-    @apply bg-[hsl(var(--status-assigned))];
-    box-shadow: 0 0 15px rgba(255, 222, 0, 0.3);
-  }
-  
-  .status-maintenance {
-    @apply bg-[hsl(var(--status-maintenance))];
-  }
-  
-  .status-offline {
-    @apply bg-[hsl(var(--status-offline))];
-  }
-  
-  .status-cleaning {
-    @apply bg-[hsl(var(--status-cleaning))];
-  }
-
+  .status-available { @apply bg-[hsl(var(--status-available))]; }
+  .status-assigned { @apply bg-[hsl(var(--status-assigned))]; box-shadow: 0 0 15px rgba(255, 222, 0, 0.3); }
+  .status-maintenance { @apply bg-[hsl(var(--status-maintenance))]; }
+  .status-offline { @apply bg-[hsl(var(--status-offline))]; }
+  .status-cleaning { @apply bg-[hsl(var(--status-cleaning))]; }
   .monitoring-glow {
     box-shadow: 0 0 20px rgba(255, 222, 0, 0.15);
     animation: monitoring-pulse 2s infinite ease-in-out;
   }
-
   @keyframes monitoring-pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.9; transform: scale(0.99); }
