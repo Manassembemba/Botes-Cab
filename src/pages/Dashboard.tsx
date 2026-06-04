@@ -37,16 +37,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 font-sans">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 glass rounded-2xl border-border">
         <div>
-          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Tableau de Bord</h1>
-          <p className="text-sm text-muted-foreground">Bienvenue sur le cockpit de pilotage Botes CAB</p>
-        </div>
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full border border-border">
-          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          Système Opérationnel
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Tableau de bord</h1>
+          <p className="text-sm text-muted-foreground mt-1">Vue d'ensemble de la flotte Botes CAB</p>
         </div>
       </div>
 
@@ -55,16 +51,18 @@ export default function Dashboard() {
         <StatCard
           title="Véhicules"
           value={stats.totalVehicles}
-          subtitle={`${stats.availableVehicles} libres`}
+          subtitle={`${stats.availableVehicles} actifs`}
           icon={Car}
           variant="primary"
+          className="glass hover:border-primary/50 transition-all"
         />
         <StatCard
-          title="Chauffeurs"
+          title="Opérateurs"
           value={stats.totalDrivers}
-          subtitle={`${stats.availableDrivers} libres`}
+          subtitle={`${stats.availableDrivers} prêts`}
           icon={Users}
           variant="success"
+          className="glass hover:border-status-available/50 transition-all"
         />
         <StatCard
           title="Missions"
@@ -72,13 +70,15 @@ export default function Dashboard() {
           subtitle="En cours"
           icon={CalendarClock}
           variant="default"
+          className="glass hover:border-primary/50 transition-all"
         />
         <StatCard
-          title="Terminées"
+          title="Success Rate"
           value={stats.completedMissionsToday}
           subtitle="Aujourd'hui"
           icon={TrendingUp}
           variant="success"
+          className="glass hover:border-status-available/50 transition-all"
         />
         <StatCard
           title="Maintenance"
@@ -86,13 +86,15 @@ export default function Dashboard() {
           subtitle="A réviser"
           icon={Wrench}
           variant="warning"
+          className="glass hover:border-status-maintenance/50 transition-all"
         />
         <StatCard
-          title="Alertes"
+          title="Incidents"
           value={stats.totalAlerts}
-          subtitle="A vérifier"
+          subtitle="Critiques"
           icon={AlertTriangle}
           variant="danger"
+          className="glass border-destructive/20 hover:border-destructive/50 transition-all"
         />
       </div>
 
@@ -100,56 +102,64 @@ export default function Dashboard() {
         {/* Main Column */}
         <div className="lg:col-span-8 space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
-            <VehicleStatusChart />
+            <div className="glass rounded-2xl p-4">
+              <VehicleStatusChart />
+            </div>
             
-            <div className="rounded-xl border border-border bg-card p-5 animate-fade-in shadow-sm relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 transition-opacity group-hover:opacity-20">
-                <BarChart className="h-24 w-24" />
+            <div className="rounded-2xl border border-primary/10 glass p-5 animate-fade-in shadow-sm relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-5 transition-opacity group-hover:opacity-10">
+                <BarChart className="h-24 w-24 text-primary" />
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-6">Taux d'Utilisation</h3>
+              <h3 className="text-lg font-black text-foreground mb-6 uppercase tracking-tight font-mono">Système Load</h3>
               <div className="flex flex-col items-center justify-center py-4">
                 <div className="relative h-40 w-40">
                   <svg className="h-40 w-40 -rotate-90 transform" viewBox="0 0 120 120">
                     <circle
-                      className="text-muted/30"
-                      strokeWidth="10"
+                      className="text-primary/5"
+                      strokeWidth="12"
                       stroke="currentColor"
                       fill="transparent"
-                      r="52"
+                      r="50"
                       cx="60"
                       cy="60"
                     />
                     <circle
-                      className="text-primary transition-all duration-1000 ease-out"
-                      strokeWidth="10"
-                      strokeDasharray={`${stats.fleetUtilization * 3.27} 327`}
+                      className="text-primary transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(255,222,0,0.5)]"
+                      strokeWidth="12"
+                      strokeDasharray={`${stats.fleetUtilization * 3.14} 314`}
                       strokeLinecap="round"
                       stroke="currentColor"
                       fill="transparent"
-                      r="52"
+                      r="50"
                       cx="60"
                       cy="60"
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl font-black text-foreground">{stats.fleetUtilization}%</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Actif</span>
+                    <span className="text-4xl font-black text-foreground font-mono">{stats.fleetUtilization}%</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Capacité</span>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-6 text-center max-w-[200px]">
-                  {stats.fleetUtilization > 70 ? "Forte sollicitation de la flotte" : "Capacité de déploiement disponible"}
+                <p className="text-[10px] text-muted-foreground mt-6 text-center max-w-[200px] font-bold uppercase tracking-tighter">
+                  {stats.fleetUtilization > 70 ? "ALERTE : Capacité critique" : "Système optimal"}
                 </p>
               </div>
             </div>
           </div>
 
-          <RecentMissions />
+          <div className="glass rounded-2xl overflow-hidden">
+            <RecentMissions />
+          </div>
         </div>
 
         {/* Sidebar Column */}
         <div className="lg:col-span-4 space-y-6">
-          <QuickActions />
-          <AlertsPanel />
+          <div className="glass rounded-2xl p-2">
+            <QuickActions />
+          </div>
+          <div className="glass rounded-2xl p-2 border-destructive/10">
+            <AlertsPanel />
+          </div>
         </div>
       </div>
     </div>
