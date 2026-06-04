@@ -5,7 +5,7 @@ import { VehiculeFormDialog } from '@/components/vehicules/VehiculeFormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, LayoutGrid, List, Pencil, Trash2, Car, Gauge, TrendingUp } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, Pencil, Trash2, Car, Gauge, TrendingUp, Wrench } from 'lucide-react';
 import { useMonthlyStats } from '@/hooks/useMonthlyStats';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
