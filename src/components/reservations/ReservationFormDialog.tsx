@@ -152,6 +152,10 @@ export function ReservationFormDialog({ open, onOpenChange, reservation }: Reser
       toast({ title: 'Erreur', description: 'Les dates sont requises.', variant: 'destructive' });
       return;
     }
+    if (new Date(form.date_depart_prevue) > new Date(form.date_arrivee_prevue)) {
+      toast({ title: 'Erreur', description: 'La date d\'arrivée ne peut pas être antérieure à la date de départ.', variant: 'destructive' });
+      return;
+    }
 
     // Validation paiement si acompte > 0 en création
     if (!reservation && form.acompte && form.acompte > 0 && !selectedPaymentMethodId) {
