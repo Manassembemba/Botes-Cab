@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Plus, Search, Calendar, MapPin, Car, ChevronLeft, ChevronRight, Pencil, Trash2, LayoutList, CalendarDays, DollarSign, Play, CheckCircle, Copy, Filter } from 'lucide-react';
+import { Plus, Search, Calendar, MapPin, Car, ChevronLeft, ChevronRight, Pencil, Trash2, LayoutList, CalendarDays, DollarSign, Play, CheckCircle, Copy, Filter, CalendarClock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { MissionCalendar } from '@/components/missions/MissionCalendar';
