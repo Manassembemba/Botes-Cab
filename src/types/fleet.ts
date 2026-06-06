@@ -1,6 +1,6 @@
 export type VehicleStatus = 'available' | 'assigned' | 'maintenance' | 'cleaning' | 'offline';
 export type DriverStatus = 'available' | 'on_mission' | 'off_duty' | 'sick_leave';
-export type MissionStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+export type MissionStatus = 'draft' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 export type FuelType = 'diesel' | 'petrol' | 'electric' | 'hybrid';
 export type ContractType = 'cdi' | 'cdd' | 'interim';
 

@@ -58,6 +58,7 @@ import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { cn } from '@/lib/utils';
 
 const statutOptions = [
+  { value: 'Brouillon', label: 'Brouillon' },
   { value: 'Planifiée', label: 'Planifiée' },
   { value: 'En cours', label: 'En cours' },
   { value: 'Terminée', label: 'Terminée' },
@@ -72,7 +73,7 @@ const courseTypeOptions = [
 ];
 
 const formSchema = z.object({
-  chauffeur_id: z.number().min(1, 'Veuillez sélectionner un chauffeur'),
+  chauffeur_id: z.number().nullable(),
   vehicule_id: z.number().min(1, 'Veuillez sélectionner un véhicule'),
   client_nom: z.string().min(1, 'Le nom du client est requis'),
   lieu_depart: z.string().min(1, 'Le lieu de départ est requis'),
@@ -86,6 +87,8 @@ const formSchema = z.object({
   devise: z.string().min(1, 'La devise est requise'),
   kilometrage_fin: z.number().nullable(),
   type_course: z.string().min(1, 'Le type de course est requis'),
+  notes: z.string().optional(),
+  caution: z.number().min(0).optional(),
 }).refine((data) => {
   const start = new Date(data.date_depart_prevue);
   const end = new Date(data.date_arrivee_prevue);
@@ -106,9 +109,9 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<MissionInsert>({
-    chauffeur_id: 0,
+    chauffeur_id: null,
     vehicule_id: 0,
-    client_id: null, // Nouveau champ pour l'ID du client
+    client_id: null,
     client_nom: '',
     lieu_depart: '',
     lieu_arrivee: '',
@@ -121,6 +124,8 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
     devise: 'USD',
     kilometrage_fin: null,
     type_course: 'Course Urbaine',
+    notes: '',
+    caution: 0,
   });
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
@@ -208,7 +213,7 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
       setFormData({
         chauffeur_id: mission.chauffeur_id,
         vehicule_id: mission.vehicule_id,
-        client_id: mission.client_id || null, // Ajout du client_id
+        client_id: mission.client_id || null,
         client_nom: mission.client_nom || '',
         lieu_depart: mission.lieu_depart,
         lieu_arrivee: mission.lieu_arrivee,
@@ -221,11 +226,12 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
         devise: mission.devise || 'USD',
         kilometrage_fin: mission.kilometrage_fin,
         type_course: mission.type_course || 'Course Urbaine',
+        notes: mission.notes || '',
+        caution: mission.caution || 0,
       });
-      // En édition, on ne gère pas le paiement initial ici, c'est fait
     } else {
       setFormData({
-        chauffeur_id: 0,
+        chauffeur_id: null,
         vehicule_id: 0,
         client_id: null,
         client_nom: '',
@@ -235,11 +241,13 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
         date_arrivee_prevue: '',
         statut_mission: 'Planifiée',
         montant_total: 0,
-        acompte: 0, // Par défaut 0
+        acompte: 0,
         solde: 0,
         devise: 'USD',
         kilometrage_fin: null,
         type_course: 'Course Urbaine',
+        notes: '',
+        caution: 0,
       });
       setSelectedPaymentMethod('');
     }
@@ -345,10 +353,10 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
       return;
     }
 
-    if (!formData.chauffeur_id || !formData.vehicule_id) {
+    if (!formData.vehicule_id) {
       toast({
         title: 'Erreur',
-        description: 'Veuillez sélectionner un chauffeur et un véhicule',
+        description: 'Veuillez sélectionner un véhicule au minimum',
         variant: 'destructive'
       });
       return;
@@ -406,7 +414,7 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
 
 
   // Vérifier si le formulaire est valide pour l'envoi
-  const isFormValid = formData.chauffeur_id > 0 && formData.vehicule_id > 0;
+  const isFormValid = formData.vehicule_id > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -606,13 +614,14 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
               <div className="space-y-2">
                 <Label htmlFor="chauffeur_id">Chauffeur</Label>
                 <Select
-                  value={formData.chauffeur_id?.toString() || ''}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, chauffeur_id: parseInt(value) }))}
+                  value={formData.chauffeur_id?.toString() || 'none'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, chauffeur_id: value === 'none' ? null : parseInt(value) }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un chauffeur" />
+                    <SelectValue placeholder="Affecter plus tard (Optionnel)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Affecter plus tard (Aucun)</SelectItem>
                     {chauffeursList?.map((chauffeur) => {
                       const isOccupe = chauffeur.disponibilite === 'Occupé'; // Supposons que le champ disponibilité indique l'état
                       return (
@@ -789,6 +798,56 @@ export function MissionFormDialog({ open, onOpenChange, mission, onOpenClientFor
               )}
             </div>
           )}
+
+          {/* Section 4 : Statut & Notes */}
+          <div className="space-y-4 p-4 border rounded-lg bg-muted/10">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs">4</span>
+              Informations complémentaires
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="statut_mission">Statut de la mission</Label>
+                <Select
+                  value={formData.statut_mission}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, statut_mission: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir le statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statutOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="caution">Caution / Garantie ({formData.devise})</Label>
+                <Input
+                  id="caution"
+                  type="number"
+                  value={formData.caution || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, caution: parseFloat(e.target.value) || 0 }))}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes / Instructions spéciales</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Ex: Bagages volumineux, accueil VIP..."
+                rows={2}
+              />
+            </div>
+          </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

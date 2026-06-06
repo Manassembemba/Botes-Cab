@@ -1,10 +1,23 @@
-import jsPDF from 'jspdf';
+import jsPDF from 'jsPDF';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import type { ReservationWithDetails } from '@/hooks/useReservations';
+import type { MissionWithDetails } from '@/hooks/useMissions';
+import { supabase } from '@/integrations/supabase/client';
 
-export function generateInvoicePDF(reservation: ReservationWithDetails): void {
+export async function generateInvoicePDF(mission: MissionWithDetails): Promise<void> {
+  // Récupérer les paiements associés
+  const { data: paiements } = await supabase
+    .from('tb_paiements')
+    .select('montant, methode_paiement')
+    .eq('mission_id', mission.mission_id);
+
+  const totauxPaiements: Record<string, number> = {};
+  paiements?.forEach(p => {
+    const methode = p.methode_paiement || 'Inconnu';
+    totauxPaiements[methode] = (totauxPaiements[methode] || 0) + (p.montant || 0);
+  });
+
   const doc = new jsPDF('p', 'mm', 'a5');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -22,8 +35,7 @@ export function generateInvoicePDF(reservation: ReservationWithDetails): void {
   const yellow = [255, 222, 0] as [number, number, number];
   const dark = [62, 62, 62] as [number, number, number];
   const itemRowBg = [255, 249, 230] as [number, number, number];
-  const resteBg = [230, 230, 230] as [number, number, number];
-
+  
   // 1. Demi-cercle supérieur jaune
   doc.setFillColor(...yellow);
   doc.ellipse(pageWidth / 2, 0, 45, 22, 'F');
@@ -46,11 +58,9 @@ export function generateInvoicePDF(reservation: ReservationWithDetails): void {
 
   // 3. Logo Image (à droite)
   try {
-    // Le logo est dans public/LOGO.png, accessible via /LOGO.png au runtime
     doc.addImage('/LOGO.png', 'PNG', pageWidth - 75, 12, 60, 22);
   } catch (e) {
     console.error("Impossible d'ajouter le logo à la facture:", e);
-    // Fallback texte si l'image échoue
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(24);
     doc.text('BOTES CAB', pageWidth - 15, 24, { align: 'right' });
@@ -71,14 +81,14 @@ export function generateInvoicePDF(reservation: ReservationWithDetails): void {
   doc.setFont('helvetica', 'bold');
   doc.text('Facturer à', 15, 60);
   
-  const clientName = reservation.client
-    ? `${reservation.client.titre || ''} ${reservation.client.nom} ${reservation.client.prenom || ''}`.trim()
-    : (reservation.client_nom || 'Client Occasionnel');
+  const clientName = mission.client
+    ? `${mission.client.titre || ''} ${mission.client.nom} ${mission.client.prenom || ''}`.trim()
+    : (mission.client_nom || 'Client Occasionnel');
   doc.text(clientName.toUpperCase(), 15, 67);
   
   doc.setFont('helvetica', 'normal');
-  if (reservation.client?.telephone) {
-    doc.text(reservation.client.telephone, 15, 73);
+  if (mission.client?.telephone) {
+    doc.text(mission.client.telephone, 15, 73);
   }
 
   // Tableau Méta (Facture #, Date)
@@ -93,18 +103,20 @@ export function generateInvoicePDF(reservation: ReservationWithDetails): void {
   doc.text('Date émission', pageWidth - 90, 73);
   
   doc.setFont('helvetica', 'normal');
-  const invoiceNum = `BC${String(reservation.reservation_id).padStart(4, '0')}`;
+  const invoiceNum = `BC${String(mission.mission_id).padStart(4, '0')}`;
   doc.text(invoiceNum, pageWidth - 20, 65, { align: 'right' });
   doc.text(format(new Date(), 'dd/MM/yyyy'), pageWidth - 20, 73, { align: 'right' });
 
   // 5. Tableau des articles
-  const dateDepartFormatee = format(new Date(reservation.date_depart_prevue), 'dd/MM/yyyy HH:mm', { locale: fr });
+  const dateDepartFormatee = format(new Date(mission.date_depart_prevue), 'dd/MM/yyyy HH:mm', { locale: fr });
   
-  const description = `${reservation.type_course || 'Location'} - ${reservation.vehicule ? reservation.vehicule.marque + ' ' + reservation.vehicule.modele : 'Véhicule'}\nDépart prévu : ${dateDepartFormatee}`;
+  const description = `${mission.type_course || 'Prestation'} - ${mission.vehicule ? mission.vehicule.marque + ' ' + mission.vehicule.modele : 'Véhicule'}\nDépart prévu : ${dateDepartFormatee}`;
   
-  const totalAmount = reservation.montant_total || 0;
-  const reste = (reservation.montant_total || 0) - (reservation.acompte || 0);
-  const deviseSymbol = (reservation.devise === 'USD' || !reservation.devise) ? '$' : 'CDF ';
+  const totalAmount = mission.montant_total || 0;
+  const acompte = mission.acompte || 0;
+  const reste = totalAmount - acompte;
+  const cautionAmount = mission.caution || 0;
+  const deviseSymbol = (mission.devise === 'USD' || !mission.devise) ? '$' : 'CDF ';
 
   autoTable(doc, {
     startY: 85,
@@ -141,41 +153,50 @@ export function generateInvoicePDF(reservation: ReservationWithDetails): void {
   const finalY = (doc as any).lastAutoTable.finalY;
 
   // 6. Totaux (Reste, Caution, Total)
-  const totalLabelX = pageWidth - 90;
-  const totalValueX = pageWidth - 20;
+  let currentY = finalY + 5;
+  const colWidth = 30;
+  const valWidth = 25;
+  const labelX = pageWidth - 85;
+  const valX = pageWidth - 20;
 
-  // Reste
-  doc.setFillColor(...resteBg);
-  doc.rect(totalLabelX, finalY + 2, 40, 10, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.text('RESTE', pageWidth - 70, finalY + 8.5, { align: 'center' });
+  doc.setFontSize(8);
   
-  doc.setFillColor(...itemRowBg);
-  doc.rect(pageWidth - 50, finalY + 2, 35, 10, 'F');
-  doc.text(`${deviseSymbol}${reste.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}`, totalValueX, finalY + 8.5, { align: 'right' });
+  const drawTotalLine = (label: string, value: number, isFinal: boolean = false) => {
+    if (isFinal) {
+      doc.setFillColor(yellow[0], yellow[1], yellow[2]);
+    } else {
+      doc.setFillColor(itemRowBg[0], itemRowBg[1], itemRowBg[2]);
+    }
+    doc.rect(labelX, currentY, colWidth, 7, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.text(label, labelX + colWidth/2, currentY + 5, { align: 'center' });
+    
+    doc.rect(labelX + colWidth, currentY, valWidth, 7, 'F');
+    doc.text(`${deviseSymbol}${value.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}`, valX, currentY + 5, { align: 'right' });
+    currentY += 8;
+  };
 
-  // Caution (Dynamique)
-  const cautionAmount = reservation.caution || 0;
+  drawTotalLine('RESTE', reste);
+  drawTotalLine('CAUTION', cautionAmount);
+  drawTotalLine('TOTAL', totalAmount, true);
+
+  // Affichage des totaux par méthode de paiement
+  currentY += 2;
   doc.setFont('helvetica', 'bold');
-  doc.text('Caution', pageWidth - 70, finalY + 18.5, { align: 'center' });
-  doc.setFillColor(...itemRowBg);
-  doc.rect(pageWidth - 50, finalY + 12, 35, 10, 'F');
-  doc.text(`${deviseSymbol}${cautionAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}`, totalValueX, finalY + 18.5, { align: 'right' });
-
-  // TOTAL FINAL
-  doc.text('TOTAL', pageWidth - 70, finalY + 28.5, { align: 'center' });
-  doc.setFillColor(...yellow);
-  doc.rect(pageWidth - 50, finalY + 22, 35, 10, 'F');
-  doc.setFontSize(12);
-  doc.text(`${deviseSymbol}${totalAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}`, totalValueX, finalY + 28.5, { align: 'right' });
+  doc.setFontSize(8);
+  doc.text('Details des paiements :', 15, currentY);
+  doc.setFont('helvetica', 'normal');
+  Object.entries(totauxPaiements).forEach(([methode, montant]) => {
+    currentY += 5;
+    doc.text(`- ${methode}: ${deviseSymbol}${montant.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}`, 20, currentY);
+  });
 
   // 7. Termes et conditions
-  doc.setFontSize(10);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text('Termes et conditions', 15, finalY + 45);
+  doc.text('Termes et conditions', 15, currentY + 10);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text('Le paiement est non remboursable.', 15, finalY + 52);
+  doc.text('Le paiement est non remboursable.', 15, currentY + 15);
 
   // 8. Bandeau de pied de page jaune
   doc.setFillColor(...yellow);

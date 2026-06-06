@@ -26,7 +26,6 @@ const navigationGroups = [
     title: 'Opérations',
     items: [
       { name: 'Tableau de Bord', href: '/', icon: LayoutDashboard },
-      { name: 'Réservations', href: '/reservations', icon: CalendarClock },
       { name: 'Missions', href: '/missions', icon: Truck },
       { name: 'Chauffeurs', href: '/drivers', icon: Users },
       { name: 'Véhicules', href: '/vehicles', icon: Car },

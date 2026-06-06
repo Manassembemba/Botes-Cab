@@ -15,13 +15,19 @@ dist-ssr
 .env.*
 !.env.example
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Agent directories
+.agents/
+.gemini/
+design-system/
+skills-lock.json
+*.sql
+!supabase/migrations/*.sql
+output.txt
+migration_list*.txt
+investigate_*.sql
+check_*.sql
+fix_*.sql
+debug_*.sql
+diagnostic_*.sql
+temp_*.sql
+update_*.sql

@@ -1,5 +1,4 @@
 import { useMissions, useDeleteMission, useUpdateMission, type MissionWithDetails, type Mission } from '@/hooks/useMissions';
-import { useReservations, type ReservationWithDetails } from '@/hooks/useReservations';
 import { useChauffeurs } from '@/hooks/useChauffeurs';
 import { useVehicules } from '@/hooks/useVehicules';
 import { MissionFormDialog } from '@/components/missions/MissionFormDialog';
@@ -45,7 +44,7 @@ import { useState } from 'react';
 
 const statusFilters = [
   { label: 'Toutes', value: 'all' },
-  { label: 'Réservées', value: 'Réservée' },
+  { label: 'Brouillons', value: 'Brouillon' },
   { label: 'Planifiées', value: 'Planifiée' },
   { label: 'En cours', value: 'En cours' },
   { label: 'Terminées', value: 'Terminée' },
@@ -54,26 +53,11 @@ const statusFilters = [
 
 export default function Missions() {
   const { data: missions, isLoading: loadingMissions, error: errorMissions } = useMissions();
-  const { data: reservations, isLoading: loadingReservations } = useReservations();
   const deleteMutation = useDeleteMission();
   const updateMutation = useUpdateMission();
   const { toast } = useToast();
 
-  // Normalisation des réservations en "quasi-missions" pour l'affichage unifié
-  // On ne garde que les réservations avec chauffeur affecté selon la demande
-  const normalizedReservations = (reservations || [])
-    .filter(r => r.chauffeur_id && r.statut_reservation !== 'convertie_en_mission')
-    .map(r => ({
-      ...r,
-      mission_id: `res-${r.reservation_id}`, // Préfixe pour éviter les conflits d'ID
-      statut_mission: 'Réservée',
-      isReservation: true,
-      // Adapter la structure pour correspondre à MissionWithDetails
-      chauffeur: r.chauffeur ? { ...r.chauffeur, chauffeur_id: r.chauffeur_id } : null,
-      vehicule: r.vehicule ? { ...r.vehicule, vehicule_id: r.vehicule_id } : null,
-    })) as unknown as any[];
-
-  const allOperativeTasks = [...(missions || []), ...normalizedReservations];
+  const allOperativeTasks = missions || [];
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -123,8 +107,8 @@ export default function Missions() {
     if (!matchesVehiculeFilter) return false;
 
     // 3. Logique de Date & Visibilité "Intelligente"
-    // Si la mission est 'En cours' ou 'Planifiée' ou 'Réservée', on l'affiche TOUJOURS en vue Liste par défaut
-    const isActiveMission = ['En cours', 'Planifiée', 'Réservée'].includes(task.statut_mission);
+    // Si la mission est 'En cours' ou 'Planifiée' ou 'Brouillon', on l'affiche TOUJOURS en vue Liste par défaut
+    const isActiveMission = ['En cours', 'Planifiée', 'Brouillon'].includes(task.statut_mission);
 
     if (showAllDates) return true;
 
@@ -213,7 +197,7 @@ export default function Missions() {
     }
   };
 
-  if (loadingMissions || loadingReservations) {
+  if (loadingMissions) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

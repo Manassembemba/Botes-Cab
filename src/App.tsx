@@ -9,7 +9,6 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Vehicles from "./pages/Vehicles";
 import Drivers from "./pages/Drivers";
-import Reservations from "./pages/Reservations";
 import Missions from "./pages/Missions";
 import Maintenance from "./pages/Maintenance";
 import Remboursements from "./pages/Remboursements";
@@ -37,7 +36,6 @@ const App = () => (
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/vehicles" element={<Vehicles />} />
                 <Route path="/drivers" element={<Drivers />} />
-                <Route path="/reservations" element={<Reservations />} />
                 <Route path="/missions" element={<Missions />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/maintenance" element={<Maintenance />} />
