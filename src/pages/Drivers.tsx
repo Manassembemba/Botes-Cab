@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useChauffeurs, useDeleteChauffeur, type Chauffeur } from '@/hooks/useChauffeurs';
 import { ChauffeurFormDialog } from '@/components/chauffeurs/ChauffeurFormDialog';
+import { PresenceCalendar } from '@/components/chauffeurs/PresenceCalendar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, LayoutGrid, List, Phone, Pencil, Trash2, Calendar } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, LayoutGrid, List, Phone, Pencil, Trash2, Calendar, UserCheck } from 'lucide-react';
 import { useMonthlyStats } from '@/hooks/useMonthlyStats';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -123,222 +125,241 @@ export default function Drivers() {
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Rechercher par nom ou téléphone..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
-          {statusFilters.map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() => setStatusFilter(filter.value)}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
-                statusFilter === filter.value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-accent'
-              )}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-1 border border-border rounded-lg p-1">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={cn(
-              'p-2 rounded transition-colors',
-              viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={cn(
-              'p-2 rounded transition-colors',
-              viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
+      <Tabs defaultValue="list" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+          <TabsTrigger value="list" className="gap-2">
             <List className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+            Liste
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2">
+            <UserCheck className="h-4 w-4" />
+            Présences
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Chauffeurs Grid/List */}
-      {viewMode === 'grid' ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredChauffeurs.map((chauffeur, index) => {
-            const status = disponibiliteConfig[chauffeur.disponibilite] || disponibiliteConfig['Disponible'];
-            const initials = `${chauffeur.prenom[0]}${chauffeur.nom[0]}`;
-            const expiringSoon = licenseExpiringSoon(chauffeur.permis_exp_date);
+        <TabsContent value="list" className="space-y-6 mt-6">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Rechercher par nom ou téléphone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-            return (
-              <div
-                key={chauffeur.chauffeur_id}
-                className={cn(
-                  'group rounded-xl border bg-card p-5 transition-all duration-200 animate-fade-in',
-                  expiringSoon && 'border-status-maintenance/50'
-                )}
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
-                      {initials}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{chauffeur.prenom} {chauffeur.nom}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Embauché le {new Date(chauffeur.date_embauche).toLocaleDateString('fr-FR')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                  {chauffeur.tel && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      <span>{chauffeur.tel}</span>
-                    </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
+              {statusFilters.map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setStatusFilter(filter.value)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
+                    statusFilter === filter.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-accent'
                   )}
-                  <Badge variant="outline" className={cn('text-xs', status.className)}>
-                    {status.label}
-                  </Badge>
-                </div>
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
 
-                {/* Track Record Mensuel */}
-                <div className="mb-4 rounded-lg bg-indigo-500/5 border border-indigo-500/10 px-3 py-2 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5 text-indigo-500" />
-                    <span>Courses ce mois</span>
-                  </div>
-                  <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                    {getDriverMonthlyMissions(chauffeur.chauffeur_id)}
-                  </span>
-                </div>
-
-                {expiringSoon && (
-                  <div className="mb-4 rounded-lg bg-status-maintenance/10 border border-status-maintenance/20 px-3 py-2">
-                    <p className="text-xs font-medium text-status-maintenance">
-                      Permis expire le {new Date(chauffeur.permis_exp_date).toLocaleDateString('fr-FR')}
-                    </p>
-                  </div>
+            <div className="flex items-center gap-1 border border-border rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={cn(
+                  'p-2 rounded transition-colors',
+                  viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                 )}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  'p-2 rounded transition-colors',
+                  viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
 
-                <div className="flex gap-2 pt-2 border-t border-border">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(chauffeur)}>
-                    <Pencil className="h-4 w-4 mr-1" />
-                    Modifier
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => {
-                      setChauffeurToDelete(chauffeur);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Chauffeur</th>
-                <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Contact</th>
-                <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Permis</th>
-                <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Courses (Mois)</th>
-                <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Statut</th>
-                <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredChauffeurs.map((chauffeur) => {
+          {/* Chauffeurs Grid/List */}
+          {viewMode === 'grid' ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredChauffeurs.map((chauffeur, index) => {
                 const status = disponibiliteConfig[chauffeur.disponibilite] || disponibiliteConfig['Disponible'];
+                const initials = `${chauffeur.prenom[0]}${chauffeur.nom[0]}`;
+                const expiringSoon = licenseExpiringSoon(chauffeur.permis_exp_date);
+
                 return (
-                  <tr key={chauffeur.chauffeur_id} className="hover:bg-accent/50 transition-colors">
-                    <td className="px-4 py-3">
+                  <div
+                    key={chauffeur.chauffeur_id}
+                    className={cn(
+                      'group rounded-xl border bg-card p-5 transition-all duration-200 animate-fade-in',
+                      expiringSoon && 'border-status-maintenance/50'
+                    )}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-sm">
-                          {chauffeur.prenom[0]}{chauffeur.nom[0]}
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+                          {initials}
                         </div>
                         <div>
-                          <div className="font-medium text-foreground">{chauffeur.prenom} {chauffeur.nom}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Depuis {new Date(chauffeur.date_embauche).toLocaleDateString('fr-FR')}
-                          </div>
+                          <h3 className="font-semibold text-foreground">{chauffeur.prenom} {chauffeur.nom}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Embauché le {new Date(chauffeur.date_embauche).toLocaleDateString('fr-FR')}
+                          </p>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-foreground">{chauffeur.tel || '-'}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className={cn(
-                        "text-sm",
-                        licenseExpiringSoon(chauffeur.permis_exp_date) ? "text-status-maintenance font-medium" : "text-foreground"
-                      )}>
-                        Expire: {new Date(chauffeur.permis_exp_date).toLocaleDateString('fr-FR')}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
+                    </div>
+
+                    <div className="space-y-2 mb-4">
+                      {chauffeur.tel && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="h-4 w-4" />
+                          <span>{chauffeur.tel}</span>
+                        </div>
+                      )}
                       <Badge variant="outline" className={cn('text-xs', status.className)}>
                         {status.label}
                       </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                      {getDriverMonthlyMissions(chauffeur.chauffeur_id)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(chauffeur)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setChauffeurToDelete(chauffeur);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                    </div>
+
+                    {/* Track Record Mensuel */}
+                    <div className="mb-4 rounded-lg bg-indigo-500/5 border border-indigo-500/10 px-3 py-2 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5 text-indigo-500" />
+                        <span>Courses ce mois</span>
                       </div>
-                    </td>
-                  </tr>
+                      <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                        {getDriverMonthlyMissions(chauffeur.chauffeur_id)}
+                      </span>
+                    </div>
+
+                    {expiringSoon && (
+                      <div className="mb-4 rounded-lg bg-status-maintenance/10 border border-status-maintenance/20 px-3 py-2">
+                        <p className="text-xs font-medium text-status-maintenance">
+                          Permis expire le {new Date(chauffeur.permis_exp_date).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 pt-2 border-t border-border">
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(chauffeur)}>
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Modifier
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setChauffeurToDelete(chauffeur);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Chauffeur</th>
+                    <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Contact</th>
+                    <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Permis</th>
+                    <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Courses (Mois)</th>
+                    <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Statut</th>
+                    <th className="text-left text-sm font-medium text-muted-foreground px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredChauffeurs.map((chauffeur) => {
+                    const status = disponibiliteConfig[chauffeur.disponibilite] || disponibiliteConfig['Disponible'];
+                    return (
+                      <tr key={chauffeur.chauffeur_id} className="hover:bg-accent/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-sm">
+                              {chauffeur.prenom[0]}{chauffeur.nom[0]}
+                            </div>
+                            <div>
+                              <div className="font-medium text-foreground">{chauffeur.prenom} {chauffeur.nom}</div>
+                              <div className="text-sm text-muted-foreground">
+                                Depuis {new Date(chauffeur.date_embauche).toLocaleDateString('fr-FR')}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-foreground">{chauffeur.tel || '-'}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className={cn(
+                            "text-sm",
+                            licenseExpiringSoon(chauffeur.permis_exp_date) ? "text-status-maintenance font-medium" : "text-foreground"
+                          )}>
+                            Expire: {new Date(chauffeur.permis_exp_date).toLocaleDateString('fr-FR')}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className={cn('text-xs', status.className)}>
+                            {status.label}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                          {getDriverMonthlyMissions(chauffeur.chauffeur_id)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(chauffeur)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setChauffeurToDelete(chauffeur);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-      {filteredChauffeurs.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Aucun chauffeur trouvé</p>
-        </div>
-      )}
+          {filteredChauffeurs.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Aucun chauffeur trouvé</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="calendar" className="mt-6">
+          <PresenceCalendar />
+        </TabsContent>
+      </Tabs>
 
       <ChauffeurFormDialog
         open={formOpen}

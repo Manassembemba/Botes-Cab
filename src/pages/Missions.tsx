@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const statusFilters = [
   { label: 'Toutes', value: 'all' },
@@ -85,6 +85,15 @@ export default function Missions() {
   const { data: chauffeurs } = useChauffeurs();
   const { data: vehicules } = useVehicules();
 
+  const [now, setNow] = useState(new Date());
+
+  // Mettre à jour 'now' toutes les minutes pour le démarrage automatique
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Logique de filtrage des missions
   const filteredMissions = allOperativeTasks.filter((task) => {
     // 1. Filtre Recherche (Priorité absolue)
     if (searchQuery) {
@@ -107,7 +116,6 @@ export default function Missions() {
     if (!matchesVehiculeFilter) return false;
 
     // 3. Logique de Date & Visibilité "Intelligente"
-    // Si la mission est 'En cours' ou 'Planifiée' ou 'Brouillon', on l'affiche TOUJOURS en vue Liste par défaut
     const isActiveMission = ['En cours', 'Planifiée', 'Brouillon'].includes(task.statut_mission);
 
     if (showAllDates) return true;
@@ -125,6 +133,24 @@ export default function Missions() {
 
     return matchesDate;
   }) || [];
+
+  // Effet pour le démarrage automatique côté client (en attendant un cron backend)
+  useEffect(() => {
+    const missionsToAutoStart = allOperativeTasks.filter(m => 
+      m.statut_mission === 'Planifiée' && 
+      new Date(m.date_depart_prevue) <= now &&
+      m.chauffeur_id && 
+      m.vehicule_id
+    );
+
+    if (missionsToAutoStart.length > 0) {
+      const m = missionsToAutoStart[0];
+      updateMutation.mutate({
+        id: m.mission_id,
+        statut_mission: 'En cours'
+      });
+    }
+  }, [allOperativeTasks, now, updateMutation]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });

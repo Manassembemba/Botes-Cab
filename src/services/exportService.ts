@@ -122,3 +122,113 @@ export const exportToPDF = (
 
     doc.save(`rapport_caisse_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
 };
+
+export interface PresenceExportData {
+  chauffeur: string;
+  tel: string;
+  present: string;
+  course: string;
+}
+
+export const exportPresencesToPDF = (
+  presences: PresenceExportData[],
+  date: Date,
+  stats: { totalPresent: number; totalEnCourse: number; totalChauffeurs: number }
+) => {
+  const doc = new jsPDF();
+
+  // Titre
+  doc.setFontSize(20);
+  doc.setTextColor(40, 40, 40);
+  doc.text('BOTES CAB - Rapport de Présence Chauffeurs', 14, 22);
+
+  // Date et stats
+  doc.setFontSize(11);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Date : ${format(date, 'PPP', { locale: fr })}`, 14, 32);
+  doc.text(`Total Chauffeurs : ${stats.totalChauffeurs}`, 14, 38);
+  doc.text(`Présents : ${stats.totalPresent}  |  En Course : ${stats.totalEnCourse}`, 14, 44);
+
+  // Tableau
+  const tableColumn = ["Chauffeur", "Téléphone", "Présence (Pointage)", "Affecté à une course"];
+  const tableRows = presences.map(p => [
+    p.chauffeur,
+    p.tel,
+    p.present,
+    p.course
+  ]);
+
+  autoTable(doc, {
+    head: [tableColumn],
+    body: tableRows,
+    startY: 54,
+    theme: 'grid',
+    headStyles: { fillColor: [79, 70, 229], textColor: 255 }, // Indigo-600
+    columnStyles: {
+      2: { halign: 'center' },
+      3: { halign: 'center' }
+    }
+  });
+
+  doc.save(`rapport_presence_${format(date, 'yyyyMMdd')}.pdf`);
+};
+
+export interface MonthlyPresenceExportData {
+  chauffeur: string;
+  totalPresent: number;
+  totalCourse: number;
+  tauxPresence: string;
+}
+
+export const exportMonthlyPresencesToPDF = (
+  data: MonthlyPresenceExportData[],
+  year: number,
+  month: number,
+  totalDays: number
+) => {
+  const doc = new jsPDF();
+  const monthName = format(new Date(year, month - 1, 1), 'MMMM yyyy', { locale: fr });
+
+  // Titre
+  doc.setFontSize(20);
+  doc.setTextColor(40, 40, 40);
+  doc.text('BOTES CAB - Rapport Mensuel de Présence', 14, 22);
+
+  // Infos Période
+  doc.setFontSize(11);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Période : ${monthName.toUpperCase()}`, 14, 32);
+  doc.text(`Nombre de jours dans le mois : ${totalDays}`, 14, 38);
+  doc.text(`Généré le : ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: fr })}`, 14, 44);
+
+  // Tableau
+  const tableColumn = ["Chauffeur", "Jours Présents", "Jours en Course", "Taux de Présence (%)"];
+  const tableRows = data.map(d => [
+    d.chauffeur,
+    d.totalPresent.toString(),
+    d.totalCourse.toString(),
+    d.tauxPresence
+  ]);
+
+  autoTable(doc, {
+    head: [tableColumn],
+    body: tableRows,
+    startY: 54,
+    theme: 'grid',
+    headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+    columnStyles: {
+      1: { halign: 'center' },
+      2: { halign: 'center' },
+      3: { halign: 'center' }
+    },
+    styles: { fontSize: 9 }
+  });
+
+  // Footer / Signature
+  const finalY = (doc as any).lastAutoTable.finalY + 20;
+  doc.setFontSize(10);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Signature Direction :', 140, finalY);
+
+  doc.save(`rapport_mensuel_presence_${year}_${month}.pdf`);
+};
